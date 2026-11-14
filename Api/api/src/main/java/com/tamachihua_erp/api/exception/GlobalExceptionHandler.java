@@ -53,6 +53,24 @@ public class GlobalExceptionHandler {
         );
     }
 
+    // 2.1 Stock insuficiente al confirmar una venta: HTTP 409 INSUFFICIENT_STOCK
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<ApiErrorResponseDto> handleInsufficientStock(
+            InsufficientStockException ex,
+            HttpServletRequest request
+    ) {
+        ApiErrorResponseDto response = new ApiErrorResponseDto(
+                Instant.now(),
+                HttpStatus.CONFLICT.value(),
+                "INSUFFICIENT_STOCK",
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of()
+        );
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(response);
+    }
+
     // 3. Errores de validación: HTTP 400
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorResponseDto> handleValidation(

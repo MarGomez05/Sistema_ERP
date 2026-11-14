@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 // Producto del inventario. Tabla products (HU-06).
@@ -47,6 +48,10 @@ public class Product {
     // TRUE si sus lotes exigen fecha de vencimiento (D-01, RN-08)
     @Column(name = "requires_expiration", nullable = false)
     private Boolean requiresExpiration;
+
+    // Tasa de IVA aplicable (0 a 100). Los precios ya la incluyen (D-02).
+    @Column(name = "tax_rate", nullable = false, precision = 5, scale = 2)
+    private BigDecimal taxRate;
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;

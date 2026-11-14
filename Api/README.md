@@ -225,24 +225,24 @@ OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 | Dashboard | `/api/dashboard/summary`, `/api/dashboard/low-stock`, `/api/dashboard/expiring-lots` |
 | Reportes | `/api/reports/stock/export` |
 | Clientes | `/api/customers`, `/api/customers/options`, `/api/customers/{id}/status`, `/api/customers/{id}/credit` |
+| Ventas | `/api/sales`, `/api/sales/{id}/confirm`, `/api/sales/{id}/cancel` |
 
 Patrón CRUD: `GET` paginado, `GET /options`, `GET /{id}`, `POST`, `PUT /{id}` y `PATCH /{id}/status`. No hay `DELETE`.
 
 Clientes: `GET` incluye `outstandingBalance` (facturas `ISSUED`, `total - paid_total`); el listado resuelve los saldos con una consulta agregada.
 
-### 7.2 Nuevos (ventas y facturación)
+Ventas: `GET` con filtros `from`, `to`, `customerId`, `status` y `userId`; `POST` y `PUT` solo en `DRAFT`; `confirm` consume stock vendible en orden FEFO con bloqueo pesimista; `cancel` devuelve stock y exige que no exista factura emitida. El `saleNumber` se genera con `document_sequences` (`V-AAAA-NNNNNN`).
+
+### 7.2 Nuevos (facturación)
 
 | Grupo | Base |
 |---|---|
-| Ventas | `/api/sales` |
 | Facturación | `/api/invoices` |
 | Pagos | `/api/invoices/{id}/payments` |
 
 Endpoints destacados:
 
 ```text
-POST /api/sales/{id}/confirm        Confirmar venta y asignar lotes FEFO
-POST /api/sales/{id}/cancel         Cancelar y devolver stock
 POST /api/sales/{id}/invoice        Emitir factura
 POST /api/invoices/{id}/payments    Registrar pago
 POST /api/invoices/{id}/credit-note Emitir nota de crédito
@@ -273,6 +273,8 @@ Roles no jerárquicos: `ADMIN`, `WAREHOUSE`, `PURCHASING`, `SELLER`.
 | Clientes: opciones de combo | ✔ | – | – | ✔ |
 | Clientes: estado y crédito | ✔ | – | – | – |
 | Ventas | ✔ | consulta | consulta | propias |
+| Ventas: crear, editar y confirmar | ✔ | – | – | propias |
+| Ventas: cancelar | ✔ | – | – | – |
 | Facturación | ✔ | – | consulta | emitir |
 | Pagos | ✔ | – | consulta | registrar |
 
@@ -293,7 +295,7 @@ Reglas:
 - Numeración por `document_sequences` con `SELECT ... FOR UPDATE`.
 - Pagos no pueden superar el total de la factura.
 - Crédito: `saldo pendiente + total` no debe superar `credit_limit`.
-- Precios incluyen IVA 13 %; `tax_rate` por producto.
+- Precios incluyen IVA 13 %; `tax_rate` por producto. `lineTotal = cantidad × precio − descuento`, `lineSubtotal = lineTotal / (1 + taxRate / 100)` y `taxAmount = lineTotal − lineSubtotal`.
 
 ## 10. Pruebas
 

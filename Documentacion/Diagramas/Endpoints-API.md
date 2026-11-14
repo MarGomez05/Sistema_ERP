@@ -456,6 +456,14 @@ Visibilidad: `SELLER` solo ve sus propias ventas; `ADMIN`, `WAREHOUSE` y `PURCHA
 
 El servidor calcula `taxRate`, `taxAmount`, `lineSubtotal`, `lineTotal` y los totales de la venta.
 
+`unitPrice` incluye IVA (D-02) y `discount` es un importe en moneda que no puede superar `cantidad × unitPrice`.
+
+```text
+lineTotal    = cantidad × unitPrice − discount
+lineSubtotal = lineTotal / (1 + taxRate / 100)
+taxAmount    = lineTotal − lineSubtotal
+```
+
 **SaleResponse (extracto)**
 
 ```json
@@ -471,7 +479,7 @@ El servidor calcula `taxRate`, `taxAmount`, `lineSubtotal`, `lineTotal` y los to
     {
       "id": 501, "productPresentationId": 31, "productName": "Clavo 2 pulgadas",
       "presentationName": "Caja", "quantity": 5.00,
-      "unitPrice": 20.00, "discount": 0.00,
+      "unitPrice": 22.60, "discount": 0.00,
       "taxRate": 13.00, "taxAmount": 11.50,
       "lineSubtotal": 100.00, "lineTotal": 113.00
     }
@@ -487,7 +495,7 @@ El servidor calcula `taxRate`, `taxAmount`, `lineSubtotal`, `lineTotal` y los to
 4. Si el stock vendible no alcanza → `409 INSUFFICIENT_STOCK`.
 5. Descuenta lotes, crea `sale_lot_allocations` y pasa a `CONFIRMED`.
 
-**Cancelar:** solo `ADMIN`. Si no hay factura emitida, devuelve cantidades a los lotes. Si hay factura, responde 409 e indica emitir nota de crédito.
+**Cancelar:** solo `ADMIN`. Cuerpo opcional `{ "reason": "..." }`. Si no hay factura emitida, devuelve cantidades a los lotes. Si hay factura, responde 409 e indica emitir nota de crédito.
 
 ---
 

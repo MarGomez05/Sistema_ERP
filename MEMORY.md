@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 14/11/2026.
-> Estado: Fases 2 y 3 completadas (Flyway V1–V6 y CRUD de clientes); API validada con `validate` y pruebas de endpoints.
+> Estado: Fases 2, 3 y 4 completadas (Flyway V1–V6, CRUD de clientes y ventas con FEFO); API validada con `validate`, pruebas unitarias y E2E de endpoints.
 
 ## 1. Resumen
 
@@ -39,12 +39,13 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - 21 tablas de negocio: las 13 originales más `customers`, `document_sequences`, `sales`, `sale_details`, `sale_lot_allocations`, `invoices`, `invoice_details` e `invoice_payments`.
 - Migraciones aplicadas y verificadas en dos escenarios: esquema existente (baseline V1 + V2–V6) y esquema vacío (V1–V6).
 - `spring.jpa.hibernate.ddl-auto=validate` se mantiene; la API arranca correctamente en ambos escenarios.
-- API implementada: auth, usuarios, roles, catálogos, productos, presentaciones, precios, proveedores, lotes, dashboard, `/api/app/**` y **clientes** (`/api/customers`).
+- API implementada: auth, usuarios, roles, catálogos, productos, presentaciones, precios, proveedores, lotes, dashboard, `/api/app/**`, **clientes** (`/api/customers`) y **ventas** (`/api/sales`).
 - Clientes: listado paginado con filtros, opciones, detalle con saldo pendiente, creación, edición, estado y crédito; matriz de seguridad aplicada.
-- Aún no hay endpoints, entidades ni servicios de ventas, facturación, pagos e imágenes: solo el esquema.
-- Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes (servicio y validaciones) y validación E2E manual contra PostgreSQL local.
+- Ventas: creación/edición en `DRAFT`, confirmación con FEFO y bloqueo pesimista, cancelación con devolución de stock, numeración por secuencia y validación de crédito.
+- Aún no hay endpoints, entidades ni servicios de facturación, pagos e imágenes: solo el esquema.
+- Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes y ventas (servicio, validaciones y cálculo de IVA) y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- Rama de trabajo actual: `feature/customer-crud`. No se debe hacer commit sin autorización.
+- Rama de trabajo actual: `feature/ventas-fefo`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
 
@@ -70,6 +71,19 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - `SecurityConfig`: ADMIN, PURCHASING y SELLER consultan; ADMIN y SELLER crean/editan; solo ADMIN cambia estado y crédito; opciones solo ADMIN y SELLER.
 - Pruebas unitarias: `CustomerServiceImplTest` y `CustomerRequestDtoValidationTest` (Mockito + Jakarta Validation), en verde.
 - Validación E2E contra PostgreSQL local: 26 comprobaciones de CRUD, validaciones, saldo y matriz de permisos, todas en verde.
+
+### Avance 14/11/2026 — Fase 4 (Ventas)
+
+- Implementación por capas: `controller/SaleController`, `service/SaleService` + `service/impl/SaleServiceImpl`, `repository/SaleRepository`, `repository/DocumentSequenceRepository`, `entity/Sale`, `entity/SaleDetail`, `entity/SaleLotAllocation`, `entity/DocumentSequence`, `mapper/SaleMapper` y DTO en `dto/sale/`.
+- Endpoints implementados: `GET /api/sales`, `GET /api/sales/{id}`, `POST /api/sales`, `PUT /api/sales/{id}`, `POST /api/sales/{id}/confirm` y `POST /api/sales/{id}/cancel`.
+- Creación y edición solo en `DRAFT`; precio vigente tomado de `product_prices` cuando no se envía; `tax_rate` desde el producto.
+- Totales con `BigDecimal` y `HALF_UP`: los precios incluyen IVA (D-02), `lineTotal = cantidad × precio − descuento`, `lineSubtotal = lineTotal / (1 + tasa/100)`.
+- Confirmación: valida cliente activo y límite de crédito, excluye lotes vencidos, bloquea con `PESSIMISTIC_WRITE` y asigna en orden FEFO; devuelve 409 `INSUFFICIENT_STOCK` si falta stock.
+- Cancelación: solo ADMIN; devuelve stock a los lotes de `sale_lot_allocations`; rechaza ventas con factura `ISSUED`.
+- Numeración `V-AAAA-NNNNNN` con `document_sequences`, `ON CONFLICT` + `SELECT ... FOR UPDATE`.
+- `SELLER` solo ve y opera sus propias ventas; `ADMIN` ve todas; `WAREHOUSE` y `PURCHASING` consultan.
+- Pruebas unitarias: `SaleTotalsCalculatorTest`, `SaleRequestDtoValidationTest` y `SaleServiceImplTest`, en verde.
+- Validación E2E contra PostgreSQL local: 53 comprobaciones de totales, FEFO, stock, cancelación, crédito, numeración, visibilidad y permisos, todas en verde.
 
 ### Documentación completada en esta rama
 
@@ -97,6 +111,8 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-09 | Spring Boot 4 requiere `spring-boot-starter-flyway`; `flyway-core` por sí solo no activa la auto-configuración | Aplicada |
 | D-10 | El saldo pendiente del cliente se calcula con consulta agregada sobre `invoices`; no se expone la entidad de factura en el módulo de clientes | Aplicada |
 | D-11 | Mantener la arquitectura por capas (`controller`, `service`, `repository`, `entity`, `mapper`, `dto`); los DTO por dominio usan subpaquetes (`dto/customer`) y no se crean paquetes raíz por funcionalidad | Aplicada |
+| D-12 | Los totales de venta se derivan de precios con IVA incluido; `discount` es un importe y la base se obtiene con `lineTotal / (1 + taxRate/100)` | Aplicada |
+| D-13 | La numeración de ventas usa `document_sequences` con `INSERT ... ON CONFLICT` y `SELECT ... FOR UPDATE` para serializar concurrencia | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -109,7 +125,11 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - `SELLER` no ve costos; `WAREHOUSE` no ve costos ni proveedores; `PURCHASING` ve costos.
 - `userId` siempre se toma del JWT, nunca del body.
 - Mensajes de usuario, validaciones, comentarios y documentación en español; identificadores de código en inglés.
-- Venta: `DRAFT → CONFIRMED → CANCELLED`. Una venta facturada no se cancela directamente: se emite nota de crédito.
+- Venta: `DRAFT → CONFIRMED → CANCELLED`. Solo se edita en `DRAFT`.
+- Confirmar venta valida stock vendible, cliente activo y crédito, y asigna lotes FEFO con bloqueo pesimista.
+- Cancelar venta devuelve stock; si hay factura emitida, exige nota de crédito.
+- La numeración de ventas es `V-AAAA-NNNNNN` y sale de `document_sequences`.
+- `discount` en la línea es un importe y no puede superar `cantidad × unitPrice`.
 - Factura emitida: inmutable; snapshot de cliente y líneas.
 - Pago: no puede superar el saldo de la factura.
 - Crédito: se valida `saldo pendiente + total` contra `credit_limit`.
@@ -195,7 +215,7 @@ Control_inventario/
 
 Backend actual: `Api/api/src/main/java/com/tamachihua_erp/api/`.
 Módulos actuales: `config`, `security`, `controller`, `service`, `repository`, `entity`, `mapper`, `dto`, `exception`, `util`.
-Subpaquetes de DTO por dominio: `dto/app`, `dto/auth`, `dto/customer`, `dto/product`, etc.
+Subpaquetes de DTO por dominio: `dto/app`, `dto/auth`, `dto/customer`, `dto/sale`, `dto/product`, etc.
 No existen paquetes raíz por funcionalidad.
 
 ## 10. Comandos
@@ -224,11 +244,10 @@ Variables requeridas: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` (Base
 
 ## 12. Pendientes técnicos
 
-- Implementar ventas, facturación, pagos e imágenes (entidades, DTOs, servicios y endpoints).
+- Implementar facturación, pagos e imágenes (entidades, DTOs, servicios y endpoints).
 - Retirar `/api/app/**` y `X-Client-Interface`.
-- Actualizar `SecurityConfig` con la matriz de ventas y facturación.
-- Mapear `image_url`/`image_alt` y `tax_rate` en las entidades cuando se implementen sus módulos.
-- Implementar FEFO con bloqueo pesimista y stock vendible.
+- Actualizar `SecurityConfig` con la matriz de facturación.
+- Mapear `image_url`/`image_alt` en las entidades y DTOs de presentación.
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Configurar CI/CD.
 - Crear frontend Angular en `web/`.

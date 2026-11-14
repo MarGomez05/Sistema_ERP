@@ -241,6 +241,25 @@ public class SecurityConfig {
                                 "/api/customers/**"
                         ).hasAnyRole("ADMIN", "SELLER")
 
+                        // Ventas: cancelar solo ADMIN (contrato §11)
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/sales/*/cancel"
+                        ).hasRole("ADMIN")
+
+                        // Ventas: consulta ADMIN, WAREHOUSE, PURCHASING y SELLER
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/sales",
+                                "/api/sales/**"
+                        ).hasAnyRole("ADMIN", "WAREHOUSE", "PURCHASING", "SELLER")
+
+                        // Ventas: crear, editar y confirmar ADMIN y SELLER
+                        .requestMatchers(
+                                "/api/sales",
+                                "/api/sales/**"
+                        ).hasAnyRole("ADMIN", "SELLER")
+
                         // Lotes: consulta para ADMIN, WAREHOUSE y PURCHASING
                         .requestMatchers(
                                 HttpMethod.GET,
