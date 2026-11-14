@@ -1,7 +1,7 @@
 # Implementación — Nueva etapa de TAMACHIHUA-ERP
 
 > Documento de planificación aprobado.
-> Fecha: 13/11/2026 · Rama: `feature/Documentacion` · Estado: en ejecución (Fase 2 completada el 14/11/2026).
+> Fecha: 13/11/2026 · Rama: `feature/Documentacion` · Estado: en ejecución (Fases 2 y 3 completadas el 14/11/2026).
 >
 > Esta etapa **no modifica código todavía**. Define cómo se trabajará: Flyway, nuevas tablas y relaciones, endpoints nuevos y modificados, flujo de clientes/ventas/facturación y frontend Angular web.
 
@@ -54,7 +54,7 @@ Cambios de alcance aprobados:
 | D-02 | Los precios actuales **incluyen IVA 13 %**; se agrega `tax_rate` por producto. |
 | D-03 | Documentos: **factura consumidor final, CCF y nota de crédito**, con numeración por secuencia. |
 | D-04 | Consumo de stock **FEFO** y exclusión de lotes vencidos al vender. |
-| D-05 | Paquetes por funcionalidad para módulos nuevos; migración incremental del código existente. |
+| D-05 | Arquitectura por capas para todo el código; DTO por dominio en `dto/<dominio>`. |
 | D-06 | Imagen por presentación mediante `image_url`; carga de archivos con almacenamiento local/S3 en fase posterior. |
 | D-07 | Frontend **Angular standalone + signals**; Material o Tailwind se decide antes de iniciar. |
 | D-08 | Mantener **stock físico** y agregar **stock vendible** (sin lotes vencidos). |
@@ -71,20 +71,23 @@ Monolito modular. No microservicios: venta, facturación e inventario deben comp
 com.tamachihua_erp.api
 ├── config/          # Seguridad, OpenAPI, configuración
 ├── security/        # JWT, user details, errores de seguridad
-├── shared/          # DTO comunes, excepciones, utilidades
-├── catalog/         # Catálogos, productos, presentaciones, proveedores
-├── inventory/       # Lotes, precios, stock, dashboard, reportes
-├── customer/        # Clientes
-├── sale/            # Ventas y detalle de venta
-└── billing/         # Facturas, notas de crédito, pagos
+├── controller/      # Todos los controllers del sistema
+├── service/         # Interfaces + impl
+├── repository/      # Spring Data JPA + projection/
+├── entity/          # Entidades JPA
+├── mapper/          # Mapeo manual entidad ↔ DTO
+├── dto/             # Subpaquetes por dominio: auth, customer, product, sale, billing...
+├── exception/       # Manejo centralizado de errores
+└── util/            # Utilidades compartidas
 ```
 
 Reglas:
 
-- Los módulos nuevos nacen con estructura por funcionalidad.
+- La organización es **por capas**, no por funcionalidad.
+- No se crean paquetes raíz nuevos (`customer/`, `sale/`, `billing/`).
+- Los DTO de cada dominio usan un subpaquete dentro de `dto/` (por ejemplo, `dto/customer`).
+- Controllers, services, repositories, entidades y mappers se agregan a sus paquetes de capa existentes.
 - El código existente se migra cuando se toque; no hay refactor masivo.
-- No se agrega código nuevo a los paquetes globales por capa.
-- Cada módulo replica `controller`, `dto`, `entity`, `mapper`, `repository`, `service` y `service/impl`.
 
 ### 4.3 Transacciones
 
@@ -564,7 +567,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 0 | Aprobación del plan y de las decisiones D-01 a D-08 | Completada |
 | 1 | Documentación base | Completada |
 | 2 | Flyway baseline y migraciones de clientes, ventas, facturación e imágenes | **Completada (14/11/2026)** |
-| 3 | CRUD de clientes con validaciones y seguridad | Pendiente |
+| 3 | CRUD de clientes con validaciones y seguridad | **Completada (14/11/2026)** |
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | Pendiente |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | Pendiente |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | Pendiente (columnas ya migradas en V5) |
@@ -579,3 +582,12 @@ Detalle de la Fase 2:
 - `baseline-on-migrate=true` y `baseline-version=1` para bases existentes.
 - Verificado sobre esquema existente (baseline `V1` + `V2`–`V6`) y sobre esquema vacío (`V1`–`V6`).
 - `ddl-auto=validate` confirmado en ambos escenarios.
+
+Detalle de la Fase 3:
+
+- Implementación por capas: `controller/CustomerController`, `service/CustomerService` + `service/impl/CustomerServiceImpl`, `repository/CustomerRepository`, `repository/projection/CustomerBalanceProjection`, `entity/Customer`, `mapper/CustomerMapper` y DTO en `dto/customer/`.
+- Endpoints: listado con filtros, opciones, detalle, creación, edición, estado y crédito.
+- Validaciones de formato en DTOs y reglas de unicidad en el servicio.
+- `outstandingBalance` calculado sobre facturas `ISSUED`; el listado usa una consulta agregada.
+- Matriz de seguridad aplicada en `SecurityConfig`.
+- Pruebas unitarias de servicio y validaciones, más validación E2E de endpoints y permisos.

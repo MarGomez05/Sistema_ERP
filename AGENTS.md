@@ -27,7 +27,8 @@
 - Filtros de listado con `Specification`; paginación con `PageResponseDto` y máximo 100 registros.
 - Errores centralizados en `GlobalExceptionHandler`; mensajes en español.
 - Endpoints REST en plural y base `/api`. No hay `DELETE`: la baja lógica es `PATCH /{id}/status`.
-- Módulos nuevos por funcionalidad (`customer/`, `sale/`, `billing/`). No agregar código nuevo a los paquetes globales por capa.
+- Organización por capas: `controller`, `service`, `repository`, `entity`, `mapper`, `dto`, `exception`, `util`. No crear paquetes raíz por funcionalidad.
+- Los DTO de cada dominio usan subpaquete dentro de `dto/` (por ejemplo, `dto/customer/`); controllers, services, repositories, entidades y mappers permanecen en sus paquetes de capa.
 - Angular: standalone components, signals, servicios HTTP tipados, formularios reactivos, sin `any` y UI en español.
 
 ## Patrones
@@ -77,7 +78,8 @@ Control_inventario/
 
 - Código backend actual: `Api/api/src/main/java/com/tamachihua_erp/api/`.
 - Paquetes actuales: `config`, `security`, `controller`, `service`, `repository`, `entity`, `mapper`, `dto`, `exception`, `util`.
-- Paquetes objetivo para módulos nuevos: `customer`, `sale`, `billing` e `inventory`.
+- Los DTO por dominio viven en subpaquetes de `dto/` (por ejemplo, `dto/customer`, `dto/sale`, `dto/billing`).
+- Paquetes objetivo: nuevas clases en las capas existentes; no crear paquetes raíz por funcionalidad.
 - No hay POM en la raíz. Todos los comandos Maven se ejecutan desde `Api/api`.
 - `Base_datos/01_create_tables.sql` y `02_seed_data.sql` son referencia histórica; la fuente oficial pasa a ser Flyway.
 

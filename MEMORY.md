@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 14/11/2026.
-> Estado: Fase 2 completada (Flyway baseline y migraciones V1–V6); API arranca con `validate` sobre esquema existente y sobre base vacía.
+> Estado: Fases 2 y 3 completadas (Flyway V1–V6 y CRUD de clientes); API validada con `validate` y pruebas de endpoints.
 
 ## 1. Resumen
 
@@ -39,11 +39,12 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - 21 tablas de negocio: las 13 originales más `customers`, `document_sequences`, `sales`, `sale_details`, `sale_lot_allocations`, `invoices`, `invoice_details` e `invoice_payments`.
 - Migraciones aplicadas y verificadas en dos escenarios: esquema existente (baseline V1 + V2–V6) y esquema vacío (V1–V6).
 - `spring.jpa.hibernate.ddl-auto=validate` se mantiene; la API arranca correctamente en ambos escenarios.
-- API implementada: auth, usuarios, roles, catálogos, productos, presentaciones, precios, proveedores, lotes, dashboard y `/api/app/**`.
-- Aún no hay endpoints, entidades ni servicios de clientes, ventas, facturación, pagos e imágenes: solo el esquema.
-- Tests: solo contexto de Spring con Testcontainers; requieren Docker y usan el perfil `test`.
+- API implementada: auth, usuarios, roles, catálogos, productos, presentaciones, precios, proveedores, lotes, dashboard, `/api/app/**` y **clientes** (`/api/customers`).
+- Clientes: listado paginado con filtros, opciones, detalle con saldo pendiente, creación, edición, estado y crédito; matriz de seguridad aplicada.
+- Aún no hay endpoints, entidades ni servicios de ventas, facturación, pagos e imágenes: solo el esquema.
+- Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes (servicio y validaciones) y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- Rama de trabajo actual: `feature/flyway-migraciones`. No se debe hacer commit sin autorización.
+- Rama de trabajo actual: `feature/customer-crud`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
 
@@ -58,6 +59,17 @@ La nueva etapa convierte el sistema en un ERP comercial con:
   - `V6__product_tax_rate.sql`: `tax_rate` por producto y correlativos del año en curso.
 - `src/test/resources/application-test.properties`: secreto JWT exclusivo de pruebas y perfil `test` en `ApiApplicationTests`.
 - Validación realizada: `./mvnw -q -DskipTests compile`, `package`, `test-compile`; arranque real contra PostgreSQL 18 local en base existente y en esquema vacío.
+
+### Avance 14/11/2026 — Fase 3 (Clientes)
+
+- Implementación por capas: `controller/CustomerController`, `service/CustomerService` + `service/impl/CustomerServiceImpl`, `repository/CustomerRepository`, `repository/projection/CustomerBalanceProjection`, `entity/Customer`, `mapper/CustomerMapper` y DTO en `dto/customer/`.
+- Endpoints implementados: `GET /api/customers`, `GET /api/customers/options`, `GET /api/customers/{id}`, `POST /api/customers`, `PUT /api/customers/{id}`, `PATCH /api/customers/{id}/status` y `PATCH /api/customers/{id}/credit`.
+- Validaciones: tipo de cliente/documento, tamaños, correo, teléfono, crédito y días no negativos.
+- Unicidad: documento, NIT, NRC, DUI y correo (sin distinguir mayúsculas); conflicto 409 con mensaje en español.
+- `outstandingBalance` se calcula con `SUM(total - paid_total)` de facturas `ISSUED`; en listados se resuelve en una sola consulta agregada.
+- `SecurityConfig`: ADMIN, PURCHASING y SELLER consultan; ADMIN y SELLER crean/editan; solo ADMIN cambia estado y crédito; opciones solo ADMIN y SELLER.
+- Pruebas unitarias: `CustomerServiceImplTest` y `CustomerRequestDtoValidationTest` (Mockito + Jakarta Validation), en verde.
+- Validación E2E contra PostgreSQL local: 26 comprobaciones de CRUD, validaciones, saldo y matriz de permisos, todas en verde.
 
 ### Documentación completada en esta rama
 
@@ -78,11 +90,13 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-02 | Los precios actuales incluyen IVA 13 %; `tax_rate` por producto | Aprobada |
 | D-03 | Factura consumidor final, CCF y nota de crédito | Aprobada |
 | D-04 | FEFO y exclusión de lotes vencidos al vender | Aprobada |
-| D-05 | Paquetes por funcionalidad para módulos nuevos, migración incremental | Aprobada |
+| D-05 | Paquetes por funcionalidad para módulos nuevos, migración incremental | Reemplazada por D-11 |
 | D-06 | Imagen por URL; upload con almacenamiento local/S3 en fase posterior | Aprobada |
 | D-07 | Angular standalone + signals; Material o Tailwind se decide antes de iniciar | Aprobada |
 | D-08 | Mantener stock físico y agregar stock vendible sin vencidos | Aprobada |
 | D-09 | Spring Boot 4 requiere `spring-boot-starter-flyway`; `flyway-core` por sí solo no activa la auto-configuración | Aplicada |
+| D-10 | El saldo pendiente del cliente se calcula con consulta agregada sobre `invoices`; no se expone la entidad de factura en el módulo de clientes | Aplicada |
+| D-11 | Mantener la arquitectura por capas (`controller`, `service`, `repository`, `entity`, `mapper`, `dto`); los DTO por dominio usan subpaquetes (`dto/customer`) y no se crean paquetes raíz por funcionalidad | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -114,7 +128,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Filtros con `Specification`; paginación con `PageResponseDto` (máximo 100).
 - Errores centralizados en `GlobalExceptionHandler`.
 - Endpoints REST en plural, base `/api`, sin `DELETE`; baja lógica con `PATCH /{id}/status`.
-- Módulos nuevos por funcionalidad: `customer/`, `sale/`, `billing/`; no agregar código nuevo a los paquetes globales por capa.
+- Organización por capas: `controller`, `service`, `repository`, `entity`, `mapper` y `dto`. Los DTO de cada dominio viven en subpaquetes (`dto/customer`, `dto/sale`, `dto/billing`); no se crean paquetes raíz por funcionalidad.
 
 ### Base de datos
 - Nombres en inglés y `snake_case`; tablas en plural.
@@ -180,7 +194,9 @@ Control_inventario/
 ```
 
 Backend actual: `Api/api/src/main/java/com/tamachihua_erp/api/`.
-Módulos objetivo: `config`, `security`, `shared`, `catalog`, `inventory`, `customer`, `sale`, `billing`.
+Módulos actuales: `config`, `security`, `controller`, `service`, `repository`, `entity`, `mapper`, `dto`, `exception`, `util`.
+Subpaquetes de DTO por dominio: `dto/app`, `dto/auth`, `dto/customer`, `dto/product`, etc.
+No existen paquetes raíz por funcionalidad.
 
 ## 10. Comandos
 
@@ -208,12 +224,12 @@ Variables requeridas: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` (Base
 
 ## 12. Pendientes técnicos
 
-- Implementar clientes, ventas, facturación, pagos e imágenes (entidades, DTOs, servicios y endpoints).
+- Implementar ventas, facturación, pagos e imágenes (entidades, DTOs, servicios y endpoints).
 - Retirar `/api/app/**` y `X-Client-Interface`.
-- Actualizar `SecurityConfig` con la nueva matriz de permisos.
+- Actualizar `SecurityConfig` con la matriz de ventas y facturación.
 - Mapear `image_url`/`image_alt` y `tax_rate` en las entidades cuando se implementen sus módulos.
 - Implementar FEFO con bloqueo pesimista y stock vendible.
-- Agregar pruebas de integración, concurrencia y seguridad.
+- Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Configurar CI/CD.
 - Crear frontend Angular en `web/`.
 - Regenerar diagramas de arquitectura y clases.

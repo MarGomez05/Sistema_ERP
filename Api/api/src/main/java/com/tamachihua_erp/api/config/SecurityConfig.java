@@ -215,6 +215,32 @@ public class SecurityConfig {
                                 "/api/suppliers/**"
                         ).hasAnyRole("ADMIN", "PURCHASING")
 
+                        // Clientes: crédito y estado solo ADMIN (contrato §10)
+                        .requestMatchers(
+                                HttpMethod.PATCH,
+                                "/api/customers/*/credit",
+                                "/api/customers/*/status"
+                        ).hasRole("ADMIN")
+
+                        // Clientes: opciones para combos ADMIN y SELLER
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/customers/options"
+                        ).hasAnyRole("ADMIN", "SELLER")
+
+                        // Clientes: consulta ADMIN, PURCHASING y SELLER
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/customers",
+                                "/api/customers/**"
+                        ).hasAnyRole("ADMIN", "PURCHASING", "SELLER")
+
+                        // Clientes: crear y editar ADMIN y SELLER
+                        .requestMatchers(
+                                "/api/customers",
+                                "/api/customers/**"
+                        ).hasAnyRole("ADMIN", "SELLER")
+
                         // Lotes: consulta para ADMIN, WAREHOUSE y PURCHASING
                         .requestMatchers(
                                 HttpMethod.GET,
