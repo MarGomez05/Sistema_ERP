@@ -76,8 +76,8 @@ Control_inventario/
 ```
 
 - Código backend actual: `Api/api/src/main/java/com/tamachihua_erp/api/`.
-- Paquetes actuales: `config`, `security`, `controller`, `service`, `repository`, `entity`, `mapper`, `dto`, `exception`, `util`.
-- Paquetes objetivo para módulos nuevos: `customer`, `sale`, `billing` e `inventory`.
+- Paquetes actuales: `config`, `security`, `controller`, `service`, `repository`, `entity`, `mapper`, `dto`, `exception`, `util` y `customer` (módulo por funcionalidad).
+- Paquetes objetivo para módulos nuevos: `sale`, `billing`, `inventory` y `shared`.
 - No hay POM en la raíz. Todos los comandos Maven se ejecutan desde `Api/api`.
 - `Base_datos/01_create_tables.sql` y `02_seed_data.sql` son referencia histórica; la fuente oficial pasa a ser Flyway.
 

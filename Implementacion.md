@@ -1,7 +1,7 @@
 # Implementación — Nueva etapa de TAMACHIHUA-ERP
 
 > Documento de planificación aprobado.
-> Fecha: 13/11/2026 · Rama: `feature/Documentacion` · Estado: en ejecución (Fase 2 completada el 14/11/2026).
+> Fecha: 13/11/2026 · Rama: `feature/Documentacion` · Estado: en ejecución (Fases 2 y 3 completadas el 14/11/2026).
 >
 > Esta etapa **no modifica código todavía**. Define cómo se trabajará: Flyway, nuevas tablas y relaciones, endpoints nuevos y modificados, flujo de clientes/ventas/facturación y frontend Angular web.
 
@@ -564,7 +564,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 0 | Aprobación del plan y de las decisiones D-01 a D-08 | Completada |
 | 1 | Documentación base | Completada |
 | 2 | Flyway baseline y migraciones de clientes, ventas, facturación e imágenes | **Completada (14/11/2026)** |
-| 3 | CRUD de clientes con validaciones y seguridad | Pendiente |
+| 3 | CRUD de clientes con validaciones y seguridad | **Completada (14/11/2026)** |
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | Pendiente |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | Pendiente |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | Pendiente (columnas ya migradas en V5) |
@@ -579,3 +579,12 @@ Detalle de la Fase 2:
 - `baseline-on-migrate=true` y `baseline-version=1` para bases existentes.
 - Verificado sobre esquema existente (baseline `V1` + `V2`–`V6`) y sobre esquema vacío (`V1`–`V6`).
 - `ddl-auto=validate` confirmado en ambos escenarios.
+
+Detalle de la Fase 3:
+
+- Módulo `customer/` con `controller`, `dto`, `entity`, `mapper`, `repository`, `service` y `service/impl`.
+- Endpoints: listado con filtros, opciones, detalle, creación, edición, estado y crédito.
+- Validaciones de formato en DTOs y reglas de unicidad en el servicio.
+- `outstandingBalance` calculado sobre facturas `ISSUED`; el listado usa una consulta agregada.
+- Matriz de seguridad aplicada en `SecurityConfig`.
+- Pruebas unitarias de servicio y validaciones, más validación E2E de endpoints y permisos.

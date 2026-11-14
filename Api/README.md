@@ -205,7 +205,7 @@ OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 
 ## 7. Endpoints
 
-### 7.1 Implementados (inventario)
+### 7.1 Implementados
 
 | Grupo | Base |
 |---|---|
@@ -218,14 +218,16 @@ OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 | Lotes | `/api/lots`, `/api/products/{productId}/last-cost` |
 | Dashboard | `/api/dashboard/summary`, `/api/dashboard/low-stock`, `/api/dashboard/expiring-lots` |
 | Reportes | `/api/reports/stock/export` |
+| Clientes | `/api/customers`, `/api/customers/options`, `/api/customers/{id}/status`, `/api/customers/{id}/credit` |
 
 Patrón CRUD: `GET` paginado, `GET /options`, `GET /{id}`, `POST`, `PUT /{id}` y `PATCH /{id}/status`. No hay `DELETE`.
 
-### 7.2 Nuevos (clientes, ventas y facturación)
+Clientes: `GET` incluye `outstandingBalance` (facturas `ISSUED`, `total - paid_total`); el listado resuelve los saldos con una consulta agregada.
+
+### 7.2 Nuevos (ventas y facturación)
 
 | Grupo | Base |
 |---|---|
-| Clientes | `/api/customers` |
 | Ventas | `/api/sales` |
 | Facturación | `/api/invoices` |
 | Pagos | `/api/invoices/{id}/payments` |
@@ -262,6 +264,8 @@ Roles no jerárquicos: `ADMIN`, `WAREHOUSE`, `PURCHASING`, `SELLER`.
 | Lotes | ✔ | ✔ | consulta | – |
 | Costos | ✔ | – | ✔ | – |
 | Clientes | ✔ | – | consulta | ✔ |
+| Clientes: opciones de combo | ✔ | – | – | ✔ |
+| Clientes: estado y crédito | ✔ | – | – | – |
 | Ventas | ✔ | consulta | consulta | propias |
 | Facturación | ✔ | – | consulta | emitir |
 | Pagos | ✔ | – | consulta | registrar |

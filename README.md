@@ -7,6 +7,7 @@ Sistema de gestión para ferretería y agroservicio. Actualmente cubre el módul
 ## Estado de la nueva etapa
 
 - **Flyway implementado**: migraciones `V1`–`V6` en `Api/api/src/main/resources/db/migration/`.
+- **CRUD de clientes implementado** en `/api/customers` con validaciones, saldo pendiente y seguridad por rol.
 - Se agregaron tablas y relaciones para clientes, ventas, detalle de venta, facturación, pagos y secuencias de documentos.
 - Se agregó `imageUrl`/`imageAlt` por presentación de producto y `taxRate` por producto en el esquema.
 - Se retiran los endpoints `/api/app/**` y el encabezado `X-Client-Interface` en el código nuevo.
