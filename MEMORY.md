@@ -1,8 +1,8 @@
 # MEMORY.md — TAMACHIHUA-ERP
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
-> Última actualización: 13/11/2026.
-> Estado: documentación de la nueva etapa completa; código y esquema aún sin modificaciones.
+> Última actualización: 14/11/2026.
+> Estado: Fase 2 completada (Flyway baseline y migraciones V1–V6); API arranca con `validate` sobre esquema existente y sobre base vacía.
 
 ## 1. Resumen
 
@@ -34,14 +34,30 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Documentación del backend en `Api/README.md`.
 - Plan aprobado en `Implementacion.md`.
 - Contrato REST v2.0 en `Documentacion/Diagramas/Endpoints-API.md`.
-- Esquema actual en `Base_datos/01_create_tables.sql` y datos de prueba en `02_seed_data.sql` (referencia histórica para el baseline).
-- 13 tablas actuales: `roles`, `users`, `product_categories`, `product_types`, `product_brands`, `product_models`, `measure_units`, `presentations`, `products`, `product_presentations`, `product_prices`, `suppliers`, `product_lots`.
+- `Base_datos/01_create_tables.sql` y `02_seed_data.sql` quedaron como referencia histórica.
+- **Flyway implementado** en `Api/api/src/main/resources/db/migration/` con `V1`–`V6`.
+- 21 tablas de negocio: las 13 originales más `customers`, `document_sequences`, `sales`, `sale_details`, `sale_lot_allocations`, `invoices`, `invoice_details` e `invoice_payments`.
+- Migraciones aplicadas y verificadas en dos escenarios: esquema existente (baseline V1 + V2–V6) y esquema vacío (V1–V6).
+- `spring.jpa.hibernate.ddl-auto=validate` se mantiene; la API arranca correctamente en ambos escenarios.
 - API implementada: auth, usuarios, roles, catálogos, productos, presentaciones, precios, proveedores, lotes, dashboard y `/api/app/**`.
-- No existen clientes, ventas, detalle de venta, facturación, pagos ni imágenes.
-- No hay Flyway todavía; el esquema se mantiene con scripts manuales.
-- Tests: solo contexto de Spring con Testcontainers.
+- Aún no hay endpoints, entidades ni servicios de clientes, ventas, facturación, pagos e imágenes: solo el esquema.
+- Tests: solo contexto de Spring con Testcontainers; requieren Docker y usan el perfil `test`.
 - No hay CI/CD configurado.
-- El repositorio está en la rama `feature/Documentacion`. No se debe hacer commit sin autorización.
+- Rama de trabajo actual: `feature/flyway-migraciones`. No se debe hacer commit sin autorización.
+
+### Avance 14/11/2026 — Fase 2 (Flyway)
+
+- `pom.xml`: se agregó `spring-boot-starter-flyway` y `flyway-database-postgresql`.
+- `application.properties`: se habilitó Flyway con `baseline-on-migrate=true` y `baseline-version=1`.
+- Migraciones creadas:
+  - `V1__baseline_inventory.sql`: 13 tablas, función `set_audit_timestamps()`, índices, triggers y roles base.
+  - `V2__customers.sql`: clientes con documentos únicos parciales y crédito.
+  - `V3__sales.sql`: `document_sequences`, `sales`, `sale_details` y `sale_lot_allocations`.
+  - `V4__invoicing.sql`: `invoices`, `invoice_details` e `invoice_payments`.
+  - `V5__product_presentation_images.sql`: `image_url` e `image_alt`.
+  - `V6__product_tax_rate.sql`: `tax_rate` por producto y correlativos del año en curso.
+- `src/test/resources/application-test.properties`: secreto JWT exclusivo de pruebas y perfil `test` en `ApiApplicationTests`.
+- Validación realizada: `./mvnw -q -DskipTests compile`, `package`, `test-compile`; arranque real contra PostgreSQL 18 local en base existente y en esquema vacío.
 
 ### Documentación completada en esta rama
 
@@ -66,6 +82,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-06 | Imagen por URL; upload con almacenamiento local/S3 en fase posterior | Aprobada |
 | D-07 | Angular standalone + signals; Material o Tailwind se decide antes de iniciar | Aprobada |
 | D-08 | Mantener stock físico y agregar stock vendible sin vencidos | Aprobada |
+| D-09 | Spring Boot 4 requiere `spring-boot-starter-flyway`; `flyway-core` por sí solo no activa la auto-configuración | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -191,12 +208,10 @@ Variables requeridas: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` (Base
 
 ## 12. Pendientes técnicos
 
-- Crear migraciones Flyway: baseline y nuevas tablas.
-- Implementar clientes, ventas, facturación, pagos e imágenes.
+- Implementar clientes, ventas, facturación, pagos e imágenes (entidades, DTOs, servicios y endpoints).
 - Retirar `/api/app/**` y `X-Client-Interface`.
 - Actualizar `SecurityConfig` con la nueva matriz de permisos.
-- Agregar `image_url` e `image_alt` a `product_presentations`.
-- Agregar `tax_rate` a `products`.
+- Mapear `image_url`/`image_alt` y `tax_rate` en las entidades cuando se implementen sus módulos.
 - Implementar FEFO con bloqueo pesimista y stock vendible.
 - Agregar pruebas de integración, concurrencia y seguridad.
 - Configurar CI/CD.

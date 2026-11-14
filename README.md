@@ -6,10 +6,10 @@ Sistema de gestión para ferretería y agroservicio. Actualmente cubre el módul
 
 ## Estado de la nueva etapa
 
-- Se adopta **Flyway** para versionar el esquema de base de datos.
-- Se agregan tablas y relaciones para clientes, ventas, detalle de venta, facturación, pagos y secuencias de documentos.
-- Se agrega imagen por presentación de producto mediante URL.
-- Se retiran los endpoints `/api/app/**` y el encabezado `X-Client-Interface`.
+- **Flyway implementado**: migraciones `V1`–`V6` en `Api/api/src/main/resources/db/migration/`.
+- Se agregaron tablas y relaciones para clientes, ventas, detalle de venta, facturación, pagos y secuencias de documentos.
+- Se agregó `imageUrl`/`imageAlt` por presentación de producto y `taxRate` por producto en el esquema.
+- Se retiran los endpoints `/api/app/**` y el encabezado `X-Client-Interface` en el código nuevo.
 - El frontend Angular se ubicará en `web/`.
 
 El plan completo está en [`Implementacion.md`](Implementacion.md). Las decisiones, convenciones y pendientes están en [`MEMORY.md`](MEMORY.md).

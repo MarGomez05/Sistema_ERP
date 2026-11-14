@@ -20,13 +20,15 @@ Esta carpeta contiene el esquema y los datos iniciales del **módulo de inventar
 - Los cambios de la nueva etapa (clientes, ventas, facturación, imágenes e IVA) están en `Implementacion.md`.
 - `product_lots.total_cost` es columna generada `STORED`; la API no la inserta.
 
-## Migraciones planificadas
+## Migraciones implementadas
 
-| Versión | Contenido |
-|---|---|
-| `V1` | Baseline del esquema actual |
-| `V2` | Clientes |
-| `V3` | Ventas, detalle, asignación de lotes y secuencias |
-| `V4` | Facturación, detalle y pagos |
-| `V5` | Imágenes de presentación |
-| `V6` | `tax_rate` y secuencias iniciales |
+| Versión | Contenido | Estado |
+|---|---|---|
+| `V1` | Baseline del esquema actual | Aplicada |
+| `V2` | Clientes | Aplicada |
+| `V3` | Ventas, detalle, asignación de lotes y secuencias | Aplicada |
+| `V4` | Facturación, detalle y pagos | Aplicada |
+| `V5` | Imágenes de presentación | Aplicada |
+| `V6` | `tax_rate` y secuencias iniciales | Aplicada |
+
+Las migraciones viven en `Api/api/src/main/resources/db/migration/`. Este directorio ya no se ejecuta de forma manual.

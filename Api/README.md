@@ -32,7 +32,7 @@ Api/
         │   │   └── util/
         │   └── resources/
         │       ├── application.properties
-        │       └── db/migration/  # Migraciones Flyway (nuevo)
+        │       └── db/migration/  # Migraciones Flyway V1–V6
         └── test/
 ```
 
@@ -94,25 +94,27 @@ Controller → Service → Repository → PostgreSQL
 
 ### 4.1 Fuente del esquema
 
-La fuente oficial del esquema pasa a ser **Flyway**. Los archivos de `Base_datos/` quedan como referencia histórica del esquema anterior.
+La fuente oficial del esquema es **Flyway**. Los archivos de `Base_datos/` quedan como referencia histórica del esquema anterior.
 
-Migraciones planificadas en `src/main/resources/db/migration/`:
+Migraciones implementadas en `src/main/resources/db/migration/`:
 
 | Versión | Archivo | Contenido |
 |---|---|---|
-| `V1` | `V1__baseline_inventory.sql` | Esquema actual de 13 tablas, triggers, índices y datos base |
+| `V1` | `V1__baseline_inventory.sql` | 13 tablas originales, función de auditoría, índices, triggers y roles base |
 | `V2` | `V2__customers.sql` | Clientes |
 | `V3` | `V3__sales.sql` | Secuencias, ventas, detalle y asignación de lotes |
 | `V4` | `V4__invoicing.sql` | Facturas, detalle y pagos |
 | `V5` | `V5__product_presentation_images.sql` | `image_url`, `image_alt` |
-| `V6` | `V6__product_tax_rate.sql` | `tax_rate` y secuencias iniciales |
+| `V6` | `V6__product_tax_rate.sql` | `tax_rate` y correlativos del año en curso |
 
 Reglas:
 
 - No se usa `DROP` ni `TRUNCATE` en migraciones.
-- En una base existente se configura el baseline de Flyway en `V1`.
-- En pruebas, Flyway crea el esquema desde cero en el contenedor.
+- En una base existente, `baseline-on-migrate` registra `V1` como baseline y aplica `V2`–`V6`.
+- En una base vacía, Flyway aplica `V1`–`V6` desde cero.
+- En pruebas, Flyway crea el esquema en el contenedor con el perfil `test`.
 - `spring.jpa.hibernate.ddl-auto=validate` se mantiene siempre.
+- Una migración aplicada no se edita: cualquier cambio se hace en una versión nueva.
 
 ### 4.2 Reglas del esquema
 
@@ -167,11 +169,16 @@ spring.jpa.show-sql=false
 app.jwt.secret=${JWT_SECRET}
 app.jwt.expiration=3600
 
-# Flyway (se agrega en la implementación)
+# Flyway
 spring.flyway.enabled=true
+spring.flyway.locations=classpath:db/migration
 spring.flyway.baseline-on-migrate=true
 spring.flyway.baseline-version=1
+spring.flyway.validate-on-migrate=true
 ```
+
+> Spring Boot 4 no activa Flyway con `flyway-core` aislado: el proyecto usa
+> `spring-boot-starter-flyway` y `flyway-database-postgresql`.
 
 Nunca escribas credenciales reales en el repositorio.
 
@@ -289,7 +296,8 @@ cd Api/api
 ```
 
 - Testcontainers requiere Docker.
-- Flyway prepara el esquema en el contenedor.
+- El perfil `test` (`src/test/resources/application-test.properties`) aporta un secreto JWT exclusivo de pruebas.
+- Flyway prepara el esquema en el contenedor desde `V1`.
 - Pruebas unitarias: IVA, totales, FEFO, numeración y crédito.
 - Pruebas de integración: repositorios, servicios, MockMvc, seguridad y concurrencia.
 - CI: GitHub Actions con JDK 21 y Maven.
