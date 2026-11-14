@@ -1,9 +1,9 @@
-package com.tamachihua_erp.api.customer.mapper;
+package com.tamachihua_erp.api.mapper;
 
-import com.tamachihua_erp.api.customer.dto.CustomerOptionDto;
-import com.tamachihua_erp.api.customer.dto.CustomerRequestDto;
-import com.tamachihua_erp.api.customer.dto.CustomerResponseDto;
-import com.tamachihua_erp.api.customer.entity.Customer;
+import com.tamachihua_erp.api.dto.customer.CustomerOptionDto;
+import com.tamachihua_erp.api.dto.customer.CustomerRequestDto;
+import com.tamachihua_erp.api.dto.customer.CustomerResponseDto;
+import com.tamachihua_erp.api.entity.Customer;
 
 import org.springframework.stereotype.Component;
 

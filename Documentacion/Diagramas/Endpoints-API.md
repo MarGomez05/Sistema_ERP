@@ -579,7 +579,7 @@ Una factura `ISSUED` no se edita ni se elimina. Los cambios se hacen con nota de
 | D-02 | IVA | Precios incluyen IVA 13 %; `tax_rate` por producto |
 | D-03 | Documentos | Consumidor final, CCF y nota de crédito |
 | D-04 | Stock | FEFO y exclusión de lotes vencidos |
-| D-05 | Código | Paquetes por funcionalidad, migración incremental |
+| D-05 | Código | Arquitectura por capas; DTO por dominio en `dto/<dominio>` |
 | D-06 | Imágenes | Por URL; upload externo en fase posterior |
 | D-07 | Frontend | Angular standalone + signals |
 | D-08 | Stock en pantalla | Stock físico + stock vendible |

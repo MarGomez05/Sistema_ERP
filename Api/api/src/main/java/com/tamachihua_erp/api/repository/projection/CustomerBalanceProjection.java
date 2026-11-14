@@ -1,4 +1,4 @@
-package com.tamachihua_erp.api.customer.repository.projection;
+package com.tamachihua_erp.api.repository.projection;
 
 import java.math.BigDecimal;
 

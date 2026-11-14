@@ -62,7 +62,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 
 ### Avance 14/11/2026 — Fase 3 (Clientes)
 
-- Módulo por funcionalidad en `com.tamachihua_erp.api.customer` con `controller`, `dto`, `entity`, `mapper`, `repository`, `service` y `service/impl`.
+- Implementación por capas: `controller/CustomerController`, `service/CustomerService` + `service/impl/CustomerServiceImpl`, `repository/CustomerRepository`, `repository/projection/CustomerBalanceProjection`, `entity/Customer`, `mapper/CustomerMapper` y DTO en `dto/customer/`.
 - Endpoints implementados: `GET /api/customers`, `GET /api/customers/options`, `GET /api/customers/{id}`, `POST /api/customers`, `PUT /api/customers/{id}`, `PATCH /api/customers/{id}/status` y `PATCH /api/customers/{id}/credit`.
 - Validaciones: tipo de cliente/documento, tamaños, correo, teléfono, crédito y días no negativos.
 - Unicidad: documento, NIT, NRC, DUI y correo (sin distinguir mayúsculas); conflicto 409 con mensaje en español.
@@ -90,12 +90,13 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-02 | Los precios actuales incluyen IVA 13 %; `tax_rate` por producto | Aprobada |
 | D-03 | Factura consumidor final, CCF y nota de crédito | Aprobada |
 | D-04 | FEFO y exclusión de lotes vencidos al vender | Aprobada |
-| D-05 | Paquetes por funcionalidad para módulos nuevos, migración incremental | Aprobada |
+| D-05 | Paquetes por funcionalidad para módulos nuevos, migración incremental | Reemplazada por D-11 |
 | D-06 | Imagen por URL; upload con almacenamiento local/S3 en fase posterior | Aprobada |
 | D-07 | Angular standalone + signals; Material o Tailwind se decide antes de iniciar | Aprobada |
 | D-08 | Mantener stock físico y agregar stock vendible sin vencidos | Aprobada |
 | D-09 | Spring Boot 4 requiere `spring-boot-starter-flyway`; `flyway-core` por sí solo no activa la auto-configuración | Aplicada |
 | D-10 | El saldo pendiente del cliente se calcula con consulta agregada sobre `invoices`; no se expone la entidad de factura en el módulo de clientes | Aplicada |
+| D-11 | Mantener la arquitectura por capas (`controller`, `service`, `repository`, `entity`, `mapper`, `dto`); los DTO por dominio usan subpaquetes (`dto/customer`) y no se crean paquetes raíz por funcionalidad | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -127,7 +128,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Filtros con `Specification`; paginación con `PageResponseDto` (máximo 100).
 - Errores centralizados en `GlobalExceptionHandler`.
 - Endpoints REST en plural, base `/api`, sin `DELETE`; baja lógica con `PATCH /{id}/status`.
-- Módulos nuevos por funcionalidad: `customer/`, `sale/`, `billing/`; no agregar código nuevo a los paquetes globales por capa.
+- Organización por capas: `controller`, `service`, `repository`, `entity`, `mapper` y `dto`. Los DTO de cada dominio viven en subpaquetes (`dto/customer`, `dto/sale`, `dto/billing`); no se crean paquetes raíz por funcionalidad.
 
 ### Base de datos
 - Nombres en inglés y `snake_case`; tablas en plural.
@@ -193,8 +194,9 @@ Control_inventario/
 ```
 
 Backend actual: `Api/api/src/main/java/com/tamachihua_erp/api/`.
-Módulos actuales: `config`, `security`, `controller`, `service`, `repository`, `entity`, `mapper`, `dto`, `exception`, `util` y `customer` (por funcionalidad).
-Módulos objetivo: `shared`, `catalog`, `inventory`, `sale` y `billing`.
+Módulos actuales: `config`, `security`, `controller`, `service`, `repository`, `entity`, `mapper`, `dto`, `exception`, `util`.
+Subpaquetes de DTO por dominio: `dto/app`, `dto/auth`, `dto/customer`, `dto/product`, etc.
+No existen paquetes raíz por funcionalidad.
 
 ## 10. Comandos
 

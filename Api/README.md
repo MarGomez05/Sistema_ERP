@@ -36,23 +36,29 @@ Api/
         └── test/
 ```
 
-### Estructura objetivo por funcionalidad
+### Estructura por capas
 
-Los módulos nuevos se organizan por funcionalidad, no por capa global:
+Las clases nuevas se agregan a las capas existentes. Los DTO de cada dominio usan un subpaquete dentro de `dto/`:
 
 ```text
 com.tamachihua_erp.api
 ├── config/
 ├── security/
-├── shared/
-├── catalog/       # Catálogos, productos, presentaciones, proveedores
-├── inventory/     # Lotes, precios, stock, dashboard, reportes
-├── customer/      # Clientes
-├── sale/          # Ventas y detalle de venta
-└── billing/       # Facturas, notas de crédito, pagos
+├── controller/        # Todos los controllers, incluido CustomerController
+├── service/           # Interfaces + impl
+├── repository/        # Spring Data JPA + projection/
+├── entity/            # Entidades JPA
+├── mapper/            # Mapeo manual entidad ↔ DTO
+├── dto/
+│   ├── auth/
+│   ├── customer/      # DTO de clientes
+│   ├── product/
+│   └── ...            # Un subpaquete por dominio
+├── exception/
+└── util/
 ```
 
-Cada módulo replica `controller`, `dto`, `entity`, `mapper`, `repository`, `service` y `service/impl`.
+No se crean paquetes raíz por funcionalidad (`customer/`, `sale/`, etc.).
 
 ## 2. Stack
 

@@ -1,9 +1,9 @@
-package com.tamachihua_erp.api.customer.service;
+package com.tamachihua_erp.api.service;
 
-import com.tamachihua_erp.api.customer.dto.CustomerCreditRequestDto;
-import com.tamachihua_erp.api.customer.dto.CustomerOptionDto;
-import com.tamachihua_erp.api.customer.dto.CustomerRequestDto;
-import com.tamachihua_erp.api.customer.dto.CustomerResponseDto;
+import com.tamachihua_erp.api.dto.customer.CustomerCreditRequestDto;
+import com.tamachihua_erp.api.dto.customer.CustomerOptionDto;
+import com.tamachihua_erp.api.dto.customer.CustomerRequestDto;
+import com.tamachihua_erp.api.dto.customer.CustomerResponseDto;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

@@ -1,4 +1,4 @@
-package com.tamachihua_erp.api.customer.entity;
+package com.tamachihua_erp.api.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;

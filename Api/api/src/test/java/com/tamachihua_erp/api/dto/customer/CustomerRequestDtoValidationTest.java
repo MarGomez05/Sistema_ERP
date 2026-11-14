@@ -1,4 +1,4 @@
-package com.tamachihua_erp.api.customer.dto;
+package com.tamachihua_erp.api.dto.customer;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;

@@ -1,12 +1,12 @@
-package com.tamachihua_erp.api.customer.service.impl;
+package com.tamachihua_erp.api.service.impl;
 
-import com.tamachihua_erp.api.customer.dto.CustomerCreditRequestDto;
-import com.tamachihua_erp.api.customer.dto.CustomerRequestDto;
-import com.tamachihua_erp.api.customer.dto.CustomerResponseDto;
-import com.tamachihua_erp.api.customer.entity.Customer;
-import com.tamachihua_erp.api.customer.mapper.CustomerMapper;
-import com.tamachihua_erp.api.customer.repository.CustomerRepository;
-import com.tamachihua_erp.api.customer.repository.projection.CustomerBalanceProjection;
+import com.tamachihua_erp.api.dto.customer.CustomerCreditRequestDto;
+import com.tamachihua_erp.api.dto.customer.CustomerRequestDto;
+import com.tamachihua_erp.api.dto.customer.CustomerResponseDto;
+import com.tamachihua_erp.api.entity.Customer;
+import com.tamachihua_erp.api.mapper.CustomerMapper;
+import com.tamachihua_erp.api.repository.CustomerRepository;
+import com.tamachihua_erp.api.repository.projection.CustomerBalanceProjection;
 import com.tamachihua_erp.api.exception.ResourceConflictException;
 import com.tamachihua_erp.api.exception.ResourceNotFoundException;
 

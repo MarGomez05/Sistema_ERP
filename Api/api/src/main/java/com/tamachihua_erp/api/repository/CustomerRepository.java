@@ -1,7 +1,7 @@
-package com.tamachihua_erp.api.customer.repository;
+package com.tamachihua_erp.api.repository;
 
-import com.tamachihua_erp.api.customer.entity.Customer;
-import com.tamachihua_erp.api.customer.repository.projection.CustomerBalanceProjection;
+import com.tamachihua_erp.api.entity.Customer;
+import com.tamachihua_erp.api.repository.projection.CustomerBalanceProjection;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
