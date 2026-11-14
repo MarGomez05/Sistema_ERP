@@ -1,7 +1,7 @@
 # Implementación — Nueva etapa de TAMACHIHUA-ERP
 
 > Documento de planificación aprobado.
-> Fecha: 13/11/2026 · Rama: `feature/Documentacion` · Estado: aprobado, pendiente de ejecución.
+> Fecha: 13/11/2026 · Rama: `feature/Documentacion` · Estado: en ejecución (Fase 2 completada el 14/11/2026).
 >
 > Esta etapa **no modifica código todavía**. Define cómo se trabajará: Flyway, nuevas tablas y relaciones, endpoints nuevos y modificados, flujo de clientes/ventas/facturación y frontend Angular web.
 
@@ -501,6 +501,9 @@ web/
 
 ## 11. Fases de entrega
 
+Trabajar con entregas precisas, sin cargar el trabajo, antes de pasar a la siguiente tarea asegurarse que quedó completa la tarea y cumple con el entregable
+Por cada entregable crea una nueva rama con el título representativo que se hará en la tarea y realiza el git push feature/xxx
+
 | Fase | Entregable |
 |---|---|
 | 0 | Aprobación del plan y de las decisiones D-01 a D-08 |
@@ -553,3 +556,26 @@ web/
 5. `Api/README.md`: guía del backend, Flyway y endpoints.
 6. `Documentacion/Diagramas/Endpoints-API.md`: contrato REST v2.0.
 7. `Base_datos/`: referencia histórica del esquema anterior al baseline.
+
+## 15. Estado de ejecución
+
+| Fase | Entregable | Estado |
+|---|---|---|
+| 0 | Aprobación del plan y de las decisiones D-01 a D-08 | Completada |
+| 1 | Documentación base | Completada |
+| 2 | Flyway baseline y migraciones de clientes, ventas, facturación e imágenes | **Completada (14/11/2026)** |
+| 3 | CRUD de clientes con validaciones y seguridad | Pendiente |
+| 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | Pendiente |
+| 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | Pendiente |
+| 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | Pendiente (columnas ya migradas en V5) |
+| 7 | Frontend Angular | Pendiente |
+| 8 | Reportes | Pendiente |
+| 9 | Endurecimiento | Pendiente |
+
+Detalle de la Fase 2:
+
+- Migraciones `V1`–`V6` en `Api/api/src/main/resources/db/migration/`.
+- `spring-boot-starter-flyway` y `flyway-database-postgresql` en `pom.xml`.
+- `baseline-on-migrate=true` y `baseline-version=1` para bases existentes.
+- Verificado sobre esquema existente (baseline `V1` + `V2`–`V6`) y sobre esquema vacío (`V1`–`V6`).
+- `ddl-auto=validate` confirmado en ambos escenarios.
