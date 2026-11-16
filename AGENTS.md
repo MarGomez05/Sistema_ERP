@@ -7,7 +7,7 @@
 ## Stack tecnológico
 
 - **Backend:** Java 21, Spring Boot 4.1.2, Maven Wrapper 3.10.0, Spring Data JPA, Hibernate, PostgreSQL 16+, Flyway, Spring Security + JWT HS256, BCrypt, Lombok, Bean Validation y springdoc OpenAPI.
-- **Frontend:** Angular, único cliente web. **No se usa Vue. No se usa Ionic ni aplicación móvil.** Se ubicará en `web/`.
+- **Frontend:** Angular 22, único cliente web. **No se usa Vue. No se usa Ionic ni aplicación móvil.** Se ubica en `Web/`.
 - **Pruebas:** JUnit 5, Spring Boot Test, Testcontainers (`postgres:latest`) y MockMvc.
 - **CI/CD:** GitHub Actions para backend y, cuando exista, frontend.
 - **Documentación:** `Api/README.md`, `Documentacion/Diagramas/Endpoints-API.md`, `Base_datos/`, `Implementacion.md` y `MEMORY.md`.
@@ -73,7 +73,7 @@ Control_inventario/
 │   └── api/                   # Proyecto Spring Boot (pom.xml aquí)
 ├── Base_datos/                # Esquema actual de referencia
 ├── Documentacion/             # Contrato, diagramas y logo
-└── web/                       # Angular (futuro)
+└── Web/                       # Cliente Angular
 ```
 
 - Código backend actual: `Api/api/src/main/java/com/tamachihua_erp/api/`.
@@ -105,7 +105,7 @@ Control_inventario/
 - Los tests usan Testcontainers y requieren Docker. Flyway prepara el esquema en el contenedor.
 - Pruebas unitarias: cálculos de IVA, totales, FEFO, numeración y límite de crédito.
 - Pruebas de integración: repositorios, servicios, MockMvc, seguridad y concurrencia.
-- Frontend: `npm ci`, lint, tests y build cuando exista `web/`.
+- Frontend (desde `Web/`): `npm ci`, `npm run build` y `npm test -- --watch=false`.
 - CI: GitHub Actions con JDK 21 y Maven para backend; Node y Angular para frontend.
 - Sin umbral de cobertura obligatorio por ahora.
 

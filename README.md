@@ -11,8 +11,8 @@ Sistema de gestión para ferretería y agroservicio. Cubre **inventario** y avan
 - **Ventas implementadas** en `/api/sales`: creación y edición en `DRAFT`, confirmación con FEFO y bloqueo pesimista, cancelación con devolución de stock, numeración `V-AAAA-NNNNNN` y validación de crédito.
 - **Facturación implementada** en `/api/invoices`: emisión desde ventas confirmadas, snapshot inmutable, CCF, pagos con control de saldo y notas de crédito con devolución opcional de stock.
 - **Imágenes por URL implementadas**: `imageUrl` e `imageAlt` en presentaciones y `PUT /api/products/{productId}/presentations/{id}/image`; la subida de archivos queda para una fase posterior.
+- **Base del frontend Angular implementada** en `Web/`: login real, layout responsive, guards por rol, panel general con datos del backend y página 404.
 - Se retiran los endpoints `/api/app/**` y el encabezado `X-Client-Interface` en el código nuevo.
-- El frontend Angular se ubicará en `web/`.
 
 El plan completo está en [`Implementacion.md`](Implementacion.md). Las decisiones, convenciones y pendientes están en [`MEMORY.md`](MEMORY.md).
 
@@ -29,7 +29,7 @@ Control_inventario/
 │   └── api/               # Proyecto Spring Boot (pom.xml aquí)
 ├── Base_datos/            # Esquema consolidado de referencia, MER y diccionario
 ├── Documentacion/         # Contrato de API, diagramas y logo
-└── web/                   # Angular (futuro)
+└── Web/                   # Cliente Angular (Fase 7.1 implementada)
 ```
 
 ## Stack
@@ -40,7 +40,7 @@ Control_inventario/
 | Persistencia | PostgreSQL 16+, Spring Data JPA, Hibernate `validate`, Flyway |
 | Seguridad | Spring Security, JWT HS256, BCrypt |
 | Documentación API | springdoc OpenAPI |
-| Frontend | Angular (standalone, signals) |
+| Frontend | Angular 22 (standalone, signals, SCSS) |
 | Pruebas | JUnit 5, Testcontainers, MockMvc |
 | CI/CD | GitHub Actions |
 
@@ -73,11 +73,32 @@ cd Api/api
 
 Documentación interactiva: `http://localhost:8080/swagger-ui/index.html`.
 
+## Arranque rápido del frontend
+
+Requisitos: Node.js 24+ y npm 11+. El backend debe estar disponible en `http://localhost:8080`.
+
+```bash
+cd Web
+npm ci
+npm start          # http://localhost:4200 con proxy /api
+```
+
+Comandos útiles:
+
+```bash
+cd Web
+npm run build
+npm test -- --watch=false
+```
+
+La guía completa del cliente web está en [`Web/README.md`](Web/README.md).
+
 ## Documentación
 
 - [`Implementacion.md`](Implementacion.md): plan de migración y nuevas funcionalidades.
 - [`MEMORY.md`](MEMORY.md): estado, decisiones, convenciones y pendientes.
 - [`Api/README.md`](Api/README.md): configuración y guía del backend.
+- [`Web/README.md`](Web/README.md): guía del cliente Angular, diseño, rutas y entregables.
 - [`Documentacion/Diagramas/Endpoints-API.md`](Documentacion/Diagramas/Endpoints-API.md): contrato REST v2.0.
 - [`Base_datos/README.md`](Base_datos/README.md): esquema consolidado, MER y diccionario de datos.
 - [`AGENTS.md`](AGENTS.md): reglas para agentes y desarrolladores.

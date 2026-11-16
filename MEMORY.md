@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 16/11/2026.
-> Estado: Fases 2, 3, 4, 5 y 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación y básica de imágenes por URL); API validada con `validate`, pruebas unitarias y E2E de endpoints.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL) y **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404). API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con pruebas en verde.
 
 ## 1. Resumen
 
@@ -47,7 +47,8 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Aún no hay subida de archivos ni almacenamiento local/S3 (D-06).
 - Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes, ventas, facturación e imágenes, y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- Rama de trabajo actual: `feature/imagenes-presentacion`. No se debe hacer commit sin autorización.
+- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard y página 404; documentado en `Web/README.md`.
+- Rama de trabajo actual: `feature/web-base`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
 
@@ -114,6 +115,21 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Validación E2E contra PostgreSQL local: 27 comprobaciones de asignación, edición, validaciones de formato, permisos, recursos inexistentes y borrado lógico de la imagen, todas en verde; imagen original restaurada.
 - Pendiente por D-06: subida `multipart/form-data` con almacenamiento local/S3 y servido de archivos.
 
+### Avance 16/11/2026 — Fase 7.1 (Base del frontend Angular)
+
+- Proyecto Angular 22 standalone creado en `Web/` (Angular CLI 22.1.8, Node 24), con Vitest, plantillas estrictas y `OnPush` por defecto.
+- Sistema de diseño propio en SCSS con tokens extraídos del logo: marca `#0873C4`, profundo `#004B87`, acento `#00A8FF`, gris `#5B6B7A`; tipografía Inter; `prefers-reduced-motion` respetado.
+- Configuración: alias `@core`, `@shared`, `@layout`, `@features`, `@env`; proxy `/api → http://localhost:8080`; presupuestos de build; favicons y logos en `public/`.
+- Núcleo de autenticación: `AuthService` con signals y sesión en `localStorage`, `restoreSession` vía `/api/auth/me`, `authInterceptor`, `errorInterceptor`, `authGuard`, `guestGuard` y `roleGuard`.
+- UI compartida: `icon`, `button`, `badge`, `skeleton`, `empty-state`, `page-header`, `stat-card`, `pagination` y `toast-container`; iconos SVG propios sin dependencias externas.
+- Layout: sidebar contraíble y responsive, header con breadcrumb y perfil, shell con enlace de salto al contenido y toast global.
+- Login real contra `POST /api/auth/login`, con validaciones, mostrar/ocultar contraseña, errores diferenciados y redirección interna segura.
+- Dashboard adaptado a los permisos reales: `summary` y `expiring-lots` para `ADMIN`/`WAREHOUSE`; `low-stock` también para `PURCHASING`; `SELLER` recibe estado de bienvenida. Incluye KPIs, composición de lotes, tablas, skeletons, estados vacíos, error con reintento y paginación.
+- Página 404 con identidad de marca y accesos según sesión.
+- Verificación: `npm run build` en verde (inicial 306.92 kB, presupuesto 1.2 MB), `npm test -- --watch=false` con 5 pruebas en verde y `ng serve` sirviendo en `4200` con assets y proxy activos.
+- Documentación del cliente en `Web/README.md`; `README.md`, `AGENTS.md`, `Implementacion.md` y `MEMORY.md` actualizados con la ruta `Web/`.
+- Pendiente para siguientes entregables: catálogos/inventario, clientes, ventas, facturación y reportes.
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -135,7 +151,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-04 | FEFO y exclusión de lotes vencidos al vender | Aprobada |
 | D-05 | Paquetes por funcionalidad para módulos nuevos, migración incremental | Reemplazada por D-11 |
 | D-06 | Imagen por URL; upload con almacenamiento local/S3 en fase posterior | Aprobada |
-| D-07 | Angular standalone + signals; Material o Tailwind se decide antes de iniciar | Aprobada |
+| D-07 | Angular standalone + signals; Material o Tailwind se decide antes de iniciar | Reemplazada por D-18 |
 | D-08 | Mantener stock físico y agregar stock vendible sin vencidos | Aprobada |
 | D-09 | Spring Boot 4 requiere `spring-boot-starter-flyway`; `flyway-core` por sí solo no activa la auto-configuración | Aplicada |
 | D-10 | El saldo pendiente del cliente se calcula con consulta agregada sobre `invoices`; no se expone la entidad de factura en el módulo de clientes | Aplicada |
@@ -146,6 +162,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-15 | La factura se emite solo desde una venta `CONFIRMED` sin factura previa y su `paymentCondition` debe coincidir con la de la venta; el costo del lote se conserva en `invoice_details.unit_cost` sin exponerse | Aplicada |
 | D-16 | La nota de crédito copia el snapshot, cancela la factura original y la venta asociada, y devuelve stock solo cuando `returnStock = true` | Aplicada |
 | D-17 | La imagen de una presentación se asigna con un endpoint JSON que guarda la URL o ruta relativa; la subida `multipart` con almacenamiento local/S3 queda para una fase posterior | Aplicada |
+| D-18 | El frontend usa un sistema de diseño propio con SCSS y tokens (sin Angular Material ni Tailwind), iconos SVG propios y consumo de la API por ruta relativa `/api` con proxy de desarrollo hacia `localhost:8080` | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -248,7 +265,7 @@ Control_inventario/
 │   └── api/                 # Backend Spring Boot
 ├── Base_datos/              # Esquema consolidado de referencia + MER + diccionario
 ├── Documentacion/           # Contrato, diagramas y logo
-└── web/                     # Angular (futuro)
+└── Web/                     # Cliente Angular (Fase 7.1 implementada)
 ```
 
 Backend actual: `Api/api/src/main/java/com/tamachihua_erp/api/`.
@@ -272,6 +289,15 @@ Desde `Api/api`:
 
 Variables requeridas: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` (Base64, mínimo 32 bytes decodificados). No hay carga automática de `.env`.
 
+Desde `Web`:
+
+```bash
+npm ci
+npm start                 # http://localhost:4200 con proxy /api → 8080
+npm run build
+npm test -- --watch=false
+```
+
 ## 11. Documentación
 
 - `Implementacion.md`: plan detallado de la nueva etapa.
@@ -288,7 +314,8 @@ Variables requeridas: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` (Base
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Ejecutar la suite con Testcontainers cuando haya Docker disponible.
 - Configurar CI/CD.
-- Crear frontend Angular en `web/`.
+- Frontend: implementar los entregables 7.2 a 7.6 (catálogos, clientes, ventas, facturación y reportes) sobre la base ya creada en `Web/`.
+- Frontend: definir estrategia de despliegue con proxy inverso para `/api`.
 - Regenerar diagramas de arquitectura y clases.
 - Documentación base ya actualizada; falta validarla con el equipo.
 

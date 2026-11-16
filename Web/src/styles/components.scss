@@ -1,0 +1,181 @@
+// =====================================================================
+// TAMACHIHUA ERP · Estilos compartidos de tablas y formularios
+// =====================================================================
+
+// ---------------------------------------------------------------------
+// Tablas de datos
+// ---------------------------------------------------------------------
+.table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: var(--radius-lg);
+}
+
+.table {
+  min-width: 640px;
+  font-size: var(--text-sm);
+
+  th {
+    padding: 10px 16px;
+    background: var(--surface-muted);
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+    letter-spacing: 0.06em;
+    text-align: left;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  tbody tr {
+    transition: background var(--transition-fast);
+  }
+
+  tbody tr:hover {
+    background: var(--surface-hover);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: 0;
+  }
+
+  .is-numeric {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
+  }
+
+  .is-strong {
+    font-weight: var(--weight-semibold);
+  }
+
+  .is-muted {
+    color: var(--text-muted);
+  }
+}
+
+// ---------------------------------------------------------------------
+// Formularios
+// ---------------------------------------------------------------------
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.field__label {
+  color: var(--text);
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+}
+
+.field__required {
+  color: var(--danger-500);
+}
+
+.field__control {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  color: var(--text);
+  font-size: var(--text-base);
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    background var(--transition-fast);
+
+  &::placeholder {
+    color: var(--text-subtle);
+  }
+
+  &:hover:not(:disabled) {
+    border-color: var(--brand-300);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: var(--brand-400);
+    box-shadow: 0 0 0 4px var(--brand-100);
+  }
+
+  &:disabled {
+    background: var(--surface-muted);
+    color: var(--text-muted);
+    cursor: not-allowed;
+  }
+
+  &.is-invalid {
+    border-color: var(--danger-500);
+    box-shadow: 0 0 0 4px var(--danger-100);
+  }
+}
+
+.field__hint {
+  color: var(--text-subtle);
+  font-size: var(--text-xs);
+}
+
+.field__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--danger-700);
+  font-size: var(--text-xs);
+  font-weight: var(--weight-medium);
+}
+
+// ---------------------------------------------------------------------
+// Estructuras de sección
+// ---------------------------------------------------------------------
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-xs);
+}
+
+.panel__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel__title {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+}
+
+.panel__subtitle {
+  color: var(--text-muted);
+  font-size: var(--text-xs);
+}
+
+.panel__body {
+  padding: 22px;
+}
+
+.panel__body--flush {
+  padding: 0;
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}

@@ -16,7 +16,7 @@ Cambios de alcance aprobados:
 - Se agrega **imagen por presentación de producto** (por URL).
 - Se retira por completo el alcance **Vue** y **móvil con Ionic**.
 - Se eliminan los endpoints `/api/app/**` y el encabezado `X-Client-Interface` en código nuevo.
-- El único cliente es **Angular web** en `web/`.
+- El único cliente es **Angular web** en `Web/`.
 
 ## 2. Estado actual
 
@@ -432,25 +432,27 @@ Reglas:
 - Cliente genérico "Consumidor Final" si se decide manejarlo como registro.
 - Datos de ventas de prueba solo en un seed de desarrollo.
 
-## 9. Frontend Angular (preparación)
+## 9. Frontend Angular
+
+> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, clientes, ventas y facturación se agregan en las fases 7.2 a 7.5 sobre esta base.
 
 ### 9.1 Ubicación
 
 ```text
-web/
+Web/
 ├── src/app/
-│   ├── core/            # auth, interceptores, guards, configuración
-│   ├── shared/          # componentes, pipes, directivas, modelos
-│   ├── layout/
+│   ├── core/            # auth, interceptores, guards, modelos y notificaciones
+│   ├── shared/ui/       # componentes reutilizables del sistema de diseño
+│   ├── layout/          # shell, sidebar, header y navegación
 │   └── features/
-│       ├── auth/
-│       ├── catalog/
-│       ├── inventory/
-│       ├── customers/
-│       ├── sales/
-│       └── billing/
-├── environments/
-└── ...
+│       ├── auth/        # login
+│       ├── dashboard/   # panel general por rol
+│       └── errors/      # 404
+├── src/styles/          # tokens, base, componentes y utilidades SCSS
+├── src/environments/
+├── public/brand/        # logos y favicons
+├── proxy.conf.json      # /api → http://localhost:8080
+└── README.md            # guía del cliente web
 ```
 
 ### 9.2 Convenciones
@@ -472,6 +474,19 @@ web/
 - Ventas: listado, nueva venta, detalle, confirmar/cancelar.
 - Facturación: listado, detalle, pagos, nota de crédito.
 - Inventario: lotes y dashboard.
+
+### 9.4 Entregable 7.1 — Base del frontend
+
+Implementado el 16/11/2026:
+
+- Proyecto Angular 22 standalone en `Web/` con Vitest, plantillas estrictas y `OnPush`.
+- Sistema de diseño propio en SCSS con paleta extraída del logo, tipografía Inter, componentes reutilizables e iconos SVG propios.
+- Login real contra `POST /api/auth/login`, sesión persistida con expiración, restauración con `GET /api/auth/me` y cierre por 401.
+- Guards `authGuard`, `guestGuard` y `roleGuard`; interceptores de token y errores; consumo por `/api` con proxy de desarrollo.
+- Shell con sidebar contraíble, header con perfil, breadcrumb, notificaciones y enlace de salto al contenido.
+- Dashboard con datos reales y adaptado a permisos: `ADMIN`/`WAREHOUSE` ven resumen y vencimientos; `PURCHASING` ve bajo stock; `SELLER` recibe bienvenida hasta el módulo de ventas.
+- Página 404, estados de carga, errores con reintento, listas vacías y paginación.
+- Verificado con `npm run build`, `npm test -- --watch=false` y `ng serve` con proxy.
 
 ## 10. Testing y CI/CD
 
@@ -573,7 +588,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | Pendiente |
+| 7 | Frontend Angular | **En progreso**: 7.1 base completada (16/11/2026); 7.2–7.6 pendientes |
 | 8 | Reportes | Pendiente |
 | 9 | Endurecimiento | Pendiente |
 
@@ -628,3 +643,13 @@ Detalle de la Fase 6:
 - Seguridad reutilizada: `ADMIN` y `WAREHOUSE` escriben; `ADMIN`, `WAREHOUSE` y `PURCHASING` consultan; `SELLER` no modifica imágenes.
 - Pruebas unitarias de validaciones y servicio; validación E2E contra PostgreSQL local con 27 comprobaciones.
 - La subida `multipart/form-data` con almacenamiento local/S3 queda pendiente por decisión D-06/D-17.
+
+Detalle de la Fase 7.1:
+
+- Proyecto Angular 22 standalone en `Web/`, con Vitest, `strictTemplates`, `OnPush`, alias de importación y proxy `/api` → `http://localhost:8080`.
+- Sistema de diseño propio: tokens SCSS con la paleta del logo, tipografía Inter, componentes compartidos (`icon`, `button`, `badge`, `skeleton`, `empty-state`, `page-header`, `stat-card`, `pagination`, `toast-container`) y `prefers-reduced-motion`.
+- Autenticación real contra `/api/auth/login`, sesión en `localStorage` con expiración, restauración con `/api/auth/me`, guards e interceptores, y redirección interna segura.
+- Layout con sidebar contraíble y responsive, header con perfil y breadcrumb, notificaciones y enlace de salto al contenido.
+- Dashboard con `summary`, `low-stock` y `expiring-lots`; KPIs, composición de lotes, tablas, paginación, skeletons, estados vacíos y reintento por sección. La vista respeta los permisos reales: `SELLER` no consume endpoints restringidos.
+- Página 404 y documentación del cliente en `Web/README.md`.
+- Verificación: build de producción en verde, 5 pruebas unitarias en verde y dev server con proxy comprobado.
