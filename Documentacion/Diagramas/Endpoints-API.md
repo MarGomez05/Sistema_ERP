@@ -267,6 +267,7 @@ Reglas de stock:
 | `GET /api/products/{productId}/presentations` | Todos | Lista con stock, mínimo y precio |
 | `POST /api/products/{productId}/presentations` | ADMIN, WAREHOUSE | Asignar presentación |
 | `PUT /api/products/{productId}/presentations/{id}` | ADMIN, WAREHOUSE | Editar código, mínimo e imagen |
+| `PUT /api/products/{productId}/presentations/{id}/image` | ADMIN, WAREHOUSE | Asignar o quitar la imagen |
 | `PATCH /api/products/{productId}/presentations/{id}/status` | ADMIN, WAREHOUSE | Activar / desactivar |
 
 | Campo | Tipo | Validación |
@@ -274,10 +275,20 @@ Reglas de stock:
 | `presentationId` | long | Obligatorio al crear; combinación única producto + presentación |
 | `code` | string | Obligatorio, ≤ 50, único en el sistema |
 | `minStock` | decimal(12,2) | Obligatorio, > 0 |
-| `imageUrl` | string | Opcional, ≤ 500, URL o ruta relativa |
+| `imageUrl` | string | Opcional, ≤ 500; `http://`, `https://` o ruta relativa con `/`; vacío o nulo elimina la imagen |
 | `imageAlt` | string | Opcional, ≤ 150 |
 
-Fase posterior: `PUT /api/products/{productId}/presentations/{id}/image` con `multipart/form-data`. No se guardan binarios en PostgreSQL.
+**PresentationImageRequest** · `PUT /api/products/{productId}/presentations/{id}/image`
+
+```json
+{ "imageUrl": "/media/products/codo-pvc.jpg", "imageAlt": "Codo PVC 1/2 pulgada" }
+```
+
+- Devuelve `200` con la presentación actualizada (incluye `imageUrl` e `imageAlt`).
+- `imageUrl` vacío o nulo quita la imagen.
+- Se rechazan esquemas distintos de `http`/`https` y rutas sin `/` inicial (400).
+- Solo se guarda la referencia: no se suben binarios a PostgreSQL.
+- La subida con `multipart/form-data` y almacenamiento local/S3 queda para una fase posterior.
 
 ### 5.3 Precios
 

@@ -39,6 +39,8 @@ public class ProductPresentationMapper {
                 currentPrice,
                 safeStock,
                 StockStatusCalculator.calculate(safeStock, productPresentation.getMinStock()),
+                productPresentation.getImageUrl(),
+                productPresentation.getImageAlt(),
                 productPresentation.getIsActive()
         );
     }

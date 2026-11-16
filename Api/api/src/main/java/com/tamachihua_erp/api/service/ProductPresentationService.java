@@ -1,5 +1,6 @@
 package com.tamachihua_erp.api.service;
 
+import com.tamachihua_erp.api.dto.productpresentation.PresentationImageRequestDto;
 import com.tamachihua_erp.api.dto.productpresentation.ProductPresentationRequestDto;
 import com.tamachihua_erp.api.dto.productpresentation.ProductPresentationResponseDto;
 import com.tamachihua_erp.api.dto.productpresentation.ProductPresentationUpdateRequestDto;
@@ -17,6 +18,12 @@ public interface ProductPresentationService {
             Long productId,
             Long id,
             ProductPresentationUpdateRequestDto dto
+    );
+
+    ProductPresentationResponseDto updateImage(
+            Long productId,
+            Long id,
+            PresentationImageRequestDto dto
     );
 
     void changeStatus(Long productId, Long id, Boolean isActive);
