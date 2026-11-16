@@ -1,5 +1,6 @@
 package com.tamachihua_erp.api.service.impl;
 
+import com.tamachihua_erp.api.dto.productpresentation.PresentationImageRequestDto;
 import com.tamachihua_erp.api.dto.productpresentation.ProductPresentationRequestDto;
 import com.tamachihua_erp.api.dto.productpresentation.ProductPresentationResponseDto;
 import com.tamachihua_erp.api.dto.productpresentation.ProductPresentationUpdateRequestDto;
@@ -99,6 +100,8 @@ public class ProductPresentationServiceImpl implements ProductPresentationServic
         productPresentation.setPresentation(presentation);
         productPresentation.setCode(code);
         productPresentation.setMinStock(dto.minStock());
+        productPresentation.setImageUrl(normalizeOptionalText(dto.imageUrl()));
+        productPresentation.setImageAlt(normalizeOptionalText(dto.imageAlt()));
 
         ProductPresentation saved = repository.save(productPresentation);
 
@@ -127,13 +130,31 @@ public class ProductPresentationServiceImpl implements ProductPresentationServic
 
         productPresentation.setCode(code);
         productPresentation.setMinStock(dto.minStock());
+        productPresentation.setImageUrl(normalizeOptionalText(dto.imageUrl()));
+        productPresentation.setImageAlt(normalizeOptionalText(dto.imageAlt()));
 
         ProductPresentation saved = repository.save(productPresentation);
 
-        BigDecimal stock = loadStock(List.of(id)).getOrDefault(id, ZERO);
-        BigDecimal currentPrice = loadCurrentPrices(List.of(id)).get(id);
+        return toResponse(saved);
+    }
 
-        return mapper.toResponseDto(saved, stock, currentPrice);
+    // Asigna o quita la imagen de la presentación (contrato 5.2, D-06)
+    @Override
+    @Transactional
+    public ProductPresentationResponseDto updateImage(
+            Long productId,
+            Long id,
+            PresentationImageRequestDto dto
+    ) {
+
+        findProductOrThrow(productId);
+
+        ProductPresentation productPresentation = findPresentationOrThrow(productId, id);
+
+        productPresentation.setImageUrl(normalizeOptionalText(dto.imageUrl()));
+        productPresentation.setImageAlt(normalizeOptionalText(dto.imageAlt()));
+
+        return toResponse(repository.save(productPresentation));
     }
 
     // Desactivar siempre se permite. Activar exige que la presentación base esté activa.
@@ -204,6 +225,26 @@ public class ProductPresentationServiceImpl implements ProductPresentationServic
                         price -> price.getProductPresentation().getId(),
                         ProductPrice::getPrice
                 ));
+    }
+
+    // Respuesta de una sola presentación con su stock y precio vigente
+    private ProductPresentationResponseDto toResponse(ProductPresentation presentation) {
+
+        Long id = presentation.getId();
+
+        BigDecimal stock = loadStock(List.of(id)).getOrDefault(id, ZERO);
+        BigDecimal currentPrice = loadCurrentPrices(List.of(id)).get(id);
+
+        return mapper.toResponseDto(presentation, stock, currentPrice);
+    }
+
+    private String normalizeOptionalText(String value) {
+
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+
+        return value.trim();
     }
 
     private Product findProductOrThrow(Long productId) {

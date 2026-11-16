@@ -1,6 +1,7 @@
 package com.tamachihua_erp.api.controller;
 
 import com.tamachihua_erp.api.dto.common.StatusRequestDto;
+import com.tamachihua_erp.api.dto.productpresentation.PresentationImageRequestDto;
 import com.tamachihua_erp.api.dto.productpresentation.ProductPresentationRequestDto;
 import com.tamachihua_erp.api.dto.productpresentation.ProductPresentationResponseDto;
 import com.tamachihua_erp.api.dto.productpresentation.ProductPresentationUpdateRequestDto;
@@ -52,6 +53,16 @@ public class ProductPresentationController {
             @Valid @RequestBody ProductPresentationUpdateRequestDto dto
     ) {
         return ResponseEntity.ok(service.update(productId, id, dto));
+    }
+
+    // Asigna o quita la imagen por URL; no se suben binarios (D-06, contrato 5.2)
+    @PutMapping("/{id}/image")
+    public ResponseEntity<ProductPresentationResponseDto> updateImage(
+            @PathVariable Long productId,
+            @PathVariable Long id,
+            @Valid @RequestBody PresentationImageRequestDto dto
+    ) {
+        return ResponseEntity.ok(service.updateImage(productId, id, dto));
     }
 
     @PatchMapping("/{id}/status")

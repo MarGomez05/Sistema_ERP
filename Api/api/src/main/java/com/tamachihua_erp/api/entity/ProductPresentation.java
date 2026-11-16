@@ -37,6 +37,14 @@ public class ProductPresentation {
     @Column(name = "min_stock", nullable = false, precision = 12, scale = 2)
     private BigDecimal minStock;
 
+    // URL o ruta relativa de la imagen (V5, D-06). No se guardan binarios.
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
+    // Texto alternativo de la imagen.
+    @Column(name = "image_alt", length = 150)
+    private String imageAlt;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
 

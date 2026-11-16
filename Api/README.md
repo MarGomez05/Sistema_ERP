@@ -233,6 +233,8 @@ Clientes: `GET` incluye `outstandingBalance` (facturas `ISSUED`, `total - paid_t
 
 Ventas: `GET` con filtros `from`, `to`, `customerId`, `status` y `userId`; `POST` y `PUT` solo en `DRAFT`; `confirm` consume stock vendible en orden FEFO con bloqueo pesimista; `cancel` devuelve stock y exige que no exista factura emitida. El `saleNumber` se genera con `document_sequences` (`V-AAAA-NNNNNN`).
 
+Imágenes: las presentaciones exponen `imageUrl` e `imageAlt`. `PUT /api/products/{productId}/presentations/{id}/image` asigna o quita la imagen por referencia (`http://`, `https://` o ruta relativa con `/`); una URL vacía la elimina. No se suben binarios a PostgreSQL; la carga `multipart` con almacenamiento local/S3 queda pendiente.
+
 ### 7.2 Facturación
 
 | Grupo | Base |

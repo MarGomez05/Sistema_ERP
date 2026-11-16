@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 16/11/2026.
-> Estado: Fases 2, 3, 4 y 5 completadas (Flyway V1–V6, clientes, ventas con FEFO y facturación con pagos y notas de crédito); API validada con `validate`, pruebas unitarias y E2E de endpoints.
+> Estado: Fases 2, 3, 4, 5 y 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación y básica de imágenes por URL); API validada con `validate`, pruebas unitarias y E2E de endpoints.
 
 ## 1. Resumen
 
@@ -43,10 +43,11 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Clientes: listado paginado con filtros, opciones, detalle con saldo pendiente, creación, edición, estado y crédito; matriz de seguridad aplicada.
 - Ventas: creación/edición en `DRAFT`, confirmación con FEFO y bloqueo pesimista, cancelación con devolución de stock, numeración por secuencia y validación de crédito.
 - Facturación: emisión desde ventas confirmadas, snapshot inmutable, pagos con control de saldo y notas de crédito con devolución opcional de stock (`/api/invoices`).
-- Aún no hay endpoints, entidades ni servicios de imágenes: solo el esquema migrado.
-- Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes, ventas y facturación (servicio, validaciones y cálculo de IVA) y validación E2E manual contra PostgreSQL local.
+- Imágenes: `imageUrl` e `imageAlt` en presentaciones, expuestos en el detalle del producto y editables con `PUT /api/products/{productId}/presentations/{id}/image` (solo referencia, sin binarios).
+- Aún no hay subida de archivos ni almacenamiento local/S3 (D-06).
+- Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes, ventas, facturación e imágenes, y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- Rama de trabajo actual: `feature/facturacion`. No se debe hacer commit sin autorización.
+- Rama de trabajo actual: `feature/imagenes-presentacion`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
 
@@ -101,6 +102,18 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Pruebas unitarias: `BillingRequestValidationTest` e `InvoiceServiceImplTest`, en verde; suite unitaria existente revalidada.
 - Validación E2E contra PostgreSQL local: 51 comprobaciones de emisión, snapshot, numeración, pagos, notas de crédito, stock y permisos, todas en verde; datos de prueba eliminados.
 
+### Avance 16/11/2026 — Fase 6 (Imágenes por URL)
+
+- Columnas `image_url` e `image_alt` (migración `V5`) mapeadas en `entity/ProductPresentation`.
+- `imageUrl` e `imageAlt` agregados a `ProductPresentationRequestDto`, `ProductPresentationUpdateRequestDto` y `ProductPresentationResponseDto`; se devuelven en el detalle del producto y en el listado de presentaciones.
+- Nuevo `dto/productpresentation/PresentationImageRequestDto` y endpoint `PUT /api/products/{productId}/presentations/{id}/image` en `ProductPresentationController`.
+- `ProductPresentationService.updateImage` asigna o quita la imagen; `create` y `update` también aceptan los campos.
+- Validación en DTO: `imageUrl` ≤ 500 con `http://`, `https://` o ruta relativa que empiece con `/`; `imageAlt` ≤ 150; URL vacía o nula elimina la imagen.
+- Seguridad reutilizada: `ADMIN` y `WAREHOUSE` escriben; `ADMIN`, `WAREHOUSE` y `PURCHASING` consultan; `SELLER` no modifica imágenes.
+- Pruebas unitarias: `PresentationImageRequestDtoValidationTest` y `ProductPresentationImageServiceImplTest`, en verde; suite existente revalidada.
+- Validación E2E contra PostgreSQL local: 27 comprobaciones de asignación, edición, validaciones de formato, permisos, recursos inexistentes y borrado lógico de la imagen, todas en verde; imagen original restaurada.
+- Pendiente por D-06: subida `multipart/form-data` con almacenamiento local/S3 y servido de archivos.
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -132,6 +145,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-14 | Flyway `V1`–`V6` sigue siendo la fuente oficial del esquema; `Base_datos/esquema_consolidado.sql` es una referencia sincronizada, no una migración | Aplicada |
 | D-15 | La factura se emite solo desde una venta `CONFIRMED` sin factura previa y su `paymentCondition` debe coincidir con la de la venta; el costo del lote se conserva en `invoice_details.unit_cost` sin exponerse | Aplicada |
 | D-16 | La nota de crédito copia el snapshot, cancela la factura original y la venta asociada, y devuelve stock solo cuando `returnStock = true` | Aplicada |
+| D-17 | La imagen de una presentación se asigna con un endpoint JSON que guarda la URL o ruta relativa; la subida `multipart` con almacenamiento local/S3 queda para una fase posterior | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -155,6 +169,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - En crédito, `dueDate = issueDate + customer.creditDays` (mínimo 1 día).
 - Pago: no puede superar el saldo de la factura.
 - Nota de crédito: cancela la factura y la venta; devuelve stock solo si `returnStock = true`.
+- Imagen de presentación: solo se guarda `imageUrl`/`imageAlt` (http(s) o ruta relativa); nunca binarios en PostgreSQL.
 - Crédito: se valida `saldo pendiente + total` contra `credit_limit`.
 
 ## 6. Convenciones de código
@@ -267,9 +282,9 @@ Variables requeridas: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` (Base
 
 ## 12. Pendientes técnicos
 
-- Implementar imágenes de presentación (entidades, DTOs, servicios y endpoints).
+- Implementar la subida de imágenes con `multipart/form-data` y almacenamiento local/S3 (D-06/D-17).
+- Servir las imágenes locales o integrar el CDN elegido.
 - Retirar `/api/app/**` y `X-Client-Interface`.
-- Mapear `image_url`/`image_alt` en las entidades y DTOs de presentación.
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Ejecutar la suite con Testcontainers cuando haya Docker disponible.
 - Configurar CI/CD.

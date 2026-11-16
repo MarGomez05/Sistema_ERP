@@ -1,9 +1,9 @@
 # Implementación — Nueva etapa de TAMACHIHUA-ERP
 
 > Documento de planificación aprobado.
-> Fecha: 13/11/2026 · Rama: `feature/facturacion` · Estado: en ejecución (Fases 2, 3, 4 y 5 completadas al 16/11/2026).
+> Fecha: 13/11/2026 · Rama: `feature/imagenes-presentacion` · Estado: en ejecución (Fases 2 a 6 completadas al 16/11/2026).
 >
-> Esta etapa define cómo se trabaja: Flyway, nuevas tablas y relaciones, endpoints nuevos y modificados, flujo de clientes/ventas/facturación y frontend Angular web. Las fases 2, 3 y 4 ya están implementadas.
+> Esta etapa define cómo se trabaja: Flyway, nuevas tablas y relaciones, endpoints nuevos y modificados, flujo de clientes/ventas/facturación y frontend Angular web. Las fases 2 a 6 ya están implementadas.
 
 ## 1. Resumen ejecutivo
 
@@ -333,9 +333,11 @@ Visibilidad: `SELLER` solo ve sus propias ventas; `ADMIN` ve todas.
 
 ### 6.4 Imágenes
 
-- `imageUrl` e `imageAlt` se agregan a los DTO de presentación del producto.
-- Se exponen en el detalle y en los listados que incluyan presentaciones.
-- Fase posterior: `PUT /api/products/{productId}/presentations/{id}/image` con `multipart/form-data`.
+- Columnas `image_url` e `image_alt` migradas en `V5`; la entidad y los DTO de presentación ya las exponen.
+- `imageUrl` e `imageAlt` se devuelven en el detalle del producto y en el listado de presentaciones.
+- `PUT /api/products/{productId}/presentations/{id}/image` asigna o quita la imagen con un cuerpo JSON (`imageUrl`, `imageAlt`); `imageUrl` vacío o nulo elimina la imagen.
+- Solo se aceptan `http://`, `https://` o rutas relativas que empiecen con `/`.
+- La subida de archivos con `multipart/form-data` y almacenamiento local/S3 queda para una fase posterior (D-06, D-17).
 - No se permite subir binarios a PostgreSQL.
 
 ### 6.5 Endpoints que se retiran
@@ -570,7 +572,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 3 | CRUD de clientes con validaciones y seguridad | **Completada (14/11/2026)** |
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
-| 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | Pendiente (columnas ya migradas en V5) |
+| 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
 | 7 | Frontend Angular | Pendiente |
 | 8 | Reportes | Pendiente |
 | 9 | Endurecimiento | Pendiente |
@@ -616,3 +618,13 @@ Detalle de la Fase 5:
 - Nota de crédito solo `ADMIN`: referencia la factura original, copia el snapshot, marca la factura y la venta como `CANCELLED` y devuelve stock solo si `returnStock = true`.
 - Seguridad aplicada: `ADMIN` y `SELLER` emiten facturas y pagos; `PURCHASING` consulta; `WAREHOUSE` no accede.
 - Pruebas unitarias de validaciones, emisión, snapshot, pagos y notas de crédito; validación E2E contra PostgreSQL local con 51 comprobaciones.
+
+Detalle de la Fase 6:
+
+- Columnas `image_url` e `image_alt` en `product_presentations` (migración `V5`) mapeadas en `entity/ProductPresentation`.
+- `imageUrl` e `imageAlt` agregados a `ProductPresentationRequestDto`, `ProductPresentationUpdateRequestDto` y `ProductPresentationResponseDto`; se devuelven en el detalle del producto y en el listado de presentaciones.
+- Endpoint `PUT /api/products/{productId}/presentations/{id}/image` con `PresentationImageRequestDto`: asigna o quita la imagen sin subir binarios.
+- Validación de formato en DTO (`http://`, `https://` o ruta relativa con `/`; `imageUrl` ≤ 500 y `imageAlt` ≤ 150); una URL vacía elimina la imagen.
+- Seguridad reutilizada: `ADMIN` y `WAREHOUSE` escriben; `ADMIN`, `WAREHOUSE` y `PURCHASING` consultan; `SELLER` no modifica imágenes.
+- Pruebas unitarias de validaciones y servicio; validación E2E contra PostgreSQL local con 27 comprobaciones.
+- La subida `multipart/form-data` con almacenamiento local/S3 queda pendiente por decisión D-06/D-17.
