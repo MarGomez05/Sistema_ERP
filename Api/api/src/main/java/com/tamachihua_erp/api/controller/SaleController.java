@@ -1,10 +1,13 @@
 package com.tamachihua_erp.api.controller;
 
+import com.tamachihua_erp.api.dto.billing.InvoiceRequestDto;
+import com.tamachihua_erp.api.dto.billing.InvoiceResponseDto;
 import com.tamachihua_erp.api.dto.common.PageResponseDto;
 import com.tamachihua_erp.api.dto.sale.SaleCancelRequestDto;
 import com.tamachihua_erp.api.dto.sale.SaleRequestDto;
 import com.tamachihua_erp.api.dto.sale.SaleResponseDto;
 import com.tamachihua_erp.api.dto.sale.SaleSummaryDto;
+import com.tamachihua_erp.api.service.InvoiceService;
 import com.tamachihua_erp.api.service.SaleService;
 
 import jakarta.validation.Valid;
@@ -32,6 +35,7 @@ import java.util.List;
 public class SaleController {
 
     private final SaleService service;
+    private final InvoiceService invoiceService;
 
     @GetMapping
     public ResponseEntity<PageResponseDto<SaleSummaryDto>> findAll(
@@ -124,6 +128,23 @@ public class SaleController {
         String reason = dto == null ? null : dto.reason();
 
         return ResponseEntity.ok(service.cancel(id, reason, currentUserId(jwt)));
+    }
+
+    @PostMapping("/{id}/invoice")
+    public ResponseEntity<InvoiceResponseDto> createInvoice(
+            @PathVariable Long id,
+            @Valid @RequestBody InvoiceRequestDto dto,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        InvoiceResponseDto created = invoiceService.createFromSale(
+                id,
+                dto,
+                currentUserId(jwt)
+        );
+
+        return ResponseEntity
+                .created(URI.create("/api/invoices/" + created.id()))
+                .body(created);
     }
 
     private boolean canViewAll(Jwt jwt) {

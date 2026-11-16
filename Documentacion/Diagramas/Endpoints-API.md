@@ -520,13 +520,16 @@ taxAmount    = lineTotal − lineSubtotal
 | `saleId` | long | Obligatorio; venta `CONFIRMED` sin factura |
 | `invoiceType` | string | `CONSUMER` o `CCF` |
 | `controlNumber` | string | Opcional, único; requerido para CCF preimpreso si aplica |
-| `paymentCondition` | string | `CASH` o `CREDIT` |
+| `paymentCondition` | string | `CASH` o `CREDIT`; debe coincidir con la venta |
 | `notes` | string | Opcional, ≤ 255 |
 
 Reglas:
 
+- Solo se factura una venta `CONFIRMED` y sin factura previa; se bloquea la venta con `SELECT ... FOR UPDATE`.
 - Genera `invoiceNumber` con `document_sequences` y `SELECT ... FOR UPDATE`.
 - Copia cliente y líneas a `invoices` e `invoice_details` (snapshot inmutable).
+- `paymentCondition` debe coincidir con la condición de pago de la venta; si no coincide, 400.
+- `CCF` exige cliente registrado; `CONSUMER` permite consumidor final.
 - En crédito, `dueDate = issueDate + customer.creditDays` (mínimo 1 día).
 - Una venta solo puede tener una factura emitida (índice único parcial en `sale_id`).
 
@@ -568,6 +571,7 @@ La suma de pagos no puede superar el total de la factura (409). Actualiza `paidT
 - Referencia la factura original en `related_invoice_id`.
 - Copia las líneas como snapshot.
 - Marca la factura original como `CANCELLED`.
+- Cancela también la venta asociada, registrando usuario, fecha y motivo.
 - Devuelve stock a los lotes solo si `returnStock = true` y la venta estaba confirmada.
 - Genera número con la secuencia `CREDIT_NOTE`.
 
@@ -597,7 +601,7 @@ Una factura `ISSUED` no se edita ni se elimina. Los cambios se hacen con nota de
 | ID | Tema | Propuesta |
 |---|---|---|
 | P-01 | Formato exacto de NIT/NRC para clientes | Validar con el PO |
-| P-02 | ¿La nota de crédito devuelve stock siempre o solo con confirmación? | `returnStock` explícito |
+| P-02 | ¿La nota de crédito devuelve stock siempre o solo con confirmación? | Resuelto: `returnStock` explícito (D-16) |
 | P-03 | ¿Se requiere PDF de factura en esta etapa? | Fase posterior |
 | P-04 | ¿El cliente "Consumidor Final" es registro o `customer_id` nulo? | Nulo por ahora |
 | P-05 | ¿Se requiere retención o percepción? | Fuera de alcance inicial |

@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 16/11/2026.
-> Estado: Fases 2, 3 y 4 completadas (Flyway V1–V6, CRUD de clientes y ventas con FEFO); API validada con `validate`, pruebas unitarias y E2E de endpoints.
+> Estado: Fases 2, 3, 4 y 5 completadas (Flyway V1–V6, clientes, ventas con FEFO y facturación con pagos y notas de crédito); API validada con `validate`, pruebas unitarias y E2E de endpoints.
 
 ## 1. Resumen
 
@@ -42,10 +42,11 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - API implementada: auth, usuarios, roles, catálogos, productos, presentaciones, precios, proveedores, lotes, dashboard, `/api/app/**`, **clientes** (`/api/customers`) y **ventas** (`/api/sales`).
 - Clientes: listado paginado con filtros, opciones, detalle con saldo pendiente, creación, edición, estado y crédito; matriz de seguridad aplicada.
 - Ventas: creación/edición en `DRAFT`, confirmación con FEFO y bloqueo pesimista, cancelación con devolución de stock, numeración por secuencia y validación de crédito.
-- Aún no hay endpoints, entidades ni servicios de facturación, pagos e imágenes: solo el esquema.
-- Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes y ventas (servicio, validaciones y cálculo de IVA) y validación E2E manual contra PostgreSQL local.
+- Facturación: emisión desde ventas confirmadas, snapshot inmutable, pagos con control de saldo y notas de crédito con devolución opcional de stock (`/api/invoices`).
+- Aún no hay endpoints, entidades ni servicios de imágenes: solo el esquema migrado.
+- Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes, ventas y facturación (servicio, validaciones y cálculo de IVA) y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- Rama de trabajo actual: `feature/ventas-fefo`. No se debe hacer commit sin autorización.
+- Rama de trabajo actual: `feature/facturacion`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
 
@@ -86,6 +87,20 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Validación E2E contra PostgreSQL local: 53 comprobaciones de totales, FEFO, stock, cancelación, crédito, numeración, visibilidad y permisos, todas en verde.
 - `Base_datos/esquema_consolidado.sql` corregido (D-14): se agregaron `products.tax_rate`, `ck_products_tax_rate`, `ix_invoices_sale_id`, `ix_sale_details_sale_id`, `ix_sale_lot_allocations_sale_detail_id` y las secuencias iniciales; se validó contra la base migrada comparando columnas, restricciones e índices.
 
+### Avance 16/11/2026 — Fase 5 (Facturación)
+
+- Implementación por capas: `controller/InvoiceController`, `service/InvoiceService` + `service/impl/InvoiceServiceImpl`, `repository/InvoiceRepository`, `repository/InvoicePaymentRepository`, `entity/Invoice`, `entity/InvoiceDetail`, `entity/InvoicePayment`, `mapper/InvoiceMapper` y DTO en `dto/billing/`.
+- Endpoints implementados: `GET /api/invoices`, `GET /api/invoices/{id}`, `POST /api/invoices`, `POST /api/sales/{id}/invoice`, `POST /api/invoices/{id}/payments`, `GET /api/invoices/{id}/payments` y `POST /api/invoices/{id}/credit-note`.
+- Emisión solo desde una venta `CONFIRMED` y sin factura previa; bloqueo pesimista sobre la venta; número generado con `document_sequences` (`F-AAAA-NNNNNN` para consumidor y `CCF-AAAA-NNNNNN` para crédito fiscal).
+- Snapshot inmutable del cliente y de las líneas; el costo promedio ponderado de los lotes se guarda en `invoice_details.unit_cost` pero no se expone en la API.
+- `paymentCondition` de la factura debe coincidir con la venta; en crédito, `dueDate = issueDate + customer.creditDays` (mínimo 1 día) y se exige cliente registrado.
+- `CCF` exige cliente registrado; `CONSUMER` permite consumidor final.
+- Pagos con bloqueo de la factura: fecha no futura, monto positivo y suma de pagos ≤ total; se actualiza `paidTotal`.
+- Nota de crédito solo `ADMIN`: referencia la factura original, copia el snapshot, cancela la factura **y la venta**, y devuelve stock solo si `returnStock = true`.
+- `SecurityConfig`: `ADMIN` y `SELLER` emiten facturas y pagos; `PURCHASING` consulta; `WAREHOUSE` no accede.
+- Pruebas unitarias: `BillingRequestValidationTest` e `InvoiceServiceImplTest`, en verde; suite unitaria existente revalidada.
+- Validación E2E contra PostgreSQL local: 51 comprobaciones de emisión, snapshot, numeración, pagos, notas de crédito, stock y permisos, todas en verde; datos de prueba eliminados.
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -115,6 +130,8 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-12 | Los totales de venta se derivan de precios con IVA incluido; `discount` es un importe y la base se obtiene con `lineTotal / (1 + taxRate/100)` | Aplicada |
 | D-13 | La numeración de ventas usa `document_sequences` con `INSERT ... ON CONFLICT` y `SELECT ... FOR UPDATE` para serializar concurrencia | Aplicada |
 | D-14 | Flyway `V1`–`V6` sigue siendo la fuente oficial del esquema; `Base_datos/esquema_consolidado.sql` es una referencia sincronizada, no una migración | Aplicada |
+| D-15 | La factura se emite solo desde una venta `CONFIRMED` sin factura previa y su `paymentCondition` debe coincidir con la de la venta; el costo del lote se conserva en `invoice_details.unit_cost` sin exponerse | Aplicada |
+| D-16 | La nota de crédito copia el snapshot, cancela la factura original y la venta asociada, y devuelve stock solo cuando `returnStock = true` | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -133,7 +150,11 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - La numeración de ventas es `V-AAAA-NNNNNN` y sale de `document_sequences`.
 - `discount` en la línea es un importe y no puede superar `cantidad × unitPrice`.
 - Factura emitida: inmutable; snapshot de cliente y líneas.
+- Solo se factura una venta `CONFIRMED` y sin factura previa; `paymentCondition` debe coincidir con la venta.
+- `CCF` exige cliente registrado; `CONSUMER` admite consumidor final.
+- En crédito, `dueDate = issueDate + customer.creditDays` (mínimo 1 día).
 - Pago: no puede superar el saldo de la factura.
+- Nota de crédito: cancela la factura y la venta; devuelve stock solo si `returnStock = true`.
 - Crédito: se valida `saldo pendiente + total` contra `credit_limit`.
 
 ## 6. Convenciones de código
@@ -246,11 +267,11 @@ Variables requeridas: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` (Base
 
 ## 12. Pendientes técnicos
 
-- Implementar facturación, pagos e imágenes (entidades, DTOs, servicios y endpoints).
+- Implementar imágenes de presentación (entidades, DTOs, servicios y endpoints).
 - Retirar `/api/app/**` y `X-Client-Interface`.
-- Actualizar `SecurityConfig` con la matriz de facturación.
 - Mapear `image_url`/`image_alt` en las entidades y DTOs de presentación.
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
+- Ejecutar la suite con Testcontainers cuando haya Docker disponible.
 - Configurar CI/CD.
 - Crear frontend Angular en `web/`.
 - Regenerar diagramas de arquitectura y clases.

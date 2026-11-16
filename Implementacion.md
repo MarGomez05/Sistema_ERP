@@ -1,7 +1,7 @@
 # Implementación — Nueva etapa de TAMACHIHUA-ERP
 
 > Documento de planificación aprobado.
-> Fecha: 13/11/2026 · Rama: `feature/ventas-fefo` · Estado: en ejecución (Fases 2, 3 y 4 completadas el 14/11/2026).
+> Fecha: 13/11/2026 · Rama: `feature/facturacion` · Estado: en ejecución (Fases 2, 3, 4 y 5 completadas al 16/11/2026).
 >
 > Esta etapa define cómo se trabaja: Flyway, nuevas tablas y relaciones, endpoints nuevos y modificados, flujo de clientes/ventas/facturación y frontend Angular web. Las fases 2, 3 y 4 ya están implementadas.
 
@@ -569,7 +569,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 2 | Flyway baseline y migraciones de clientes, ventas, facturación e imágenes | **Completada (14/11/2026)** |
 | 3 | CRUD de clientes con validaciones y seguridad | **Completada (14/11/2026)** |
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
-| 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | Pendiente |
+| 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | Pendiente (columnas ya migradas en V5) |
 | 7 | Frontend Angular | Pendiente |
 | 8 | Reportes | Pendiente |
@@ -604,3 +604,15 @@ Detalle de la Fase 4:
 - Visibilidad: `SELLER` solo ve y opera sus propias ventas; `ADMIN` todas; `WAREHOUSE` y `PURCHASING` consultan.
 - Pruebas unitarias de cálculo de IVA, validaciones del DTO y servicio; validación E2E contra PostgreSQL local con 53 comprobaciones.
 - `Base_datos/esquema_consolidado.sql` corregido y validado contra el esquema migrado (ver `Base_datos/README.md`).
+
+Detalle de la Fase 5:
+
+- Implementación por capas: `controller/InvoiceController`, `service/InvoiceService` + `service/impl/InvoiceServiceImpl`, `repository/InvoiceRepository`, `repository/InvoicePaymentRepository`, `entity/Invoice`, `entity/InvoiceDetail`, `entity/InvoicePayment`, `mapper/InvoiceMapper` y DTO en `dto/billing/`.
+- Endpoints: `GET /api/invoices`, `GET /api/invoices/{id}`, `POST /api/invoices`, `POST /api/invoices/{id}/payments`, `GET /api/invoices/{id}/payments`, `POST /api/invoices/{id}/credit-note` y `POST /api/sales/{id}/invoice`.
+- Emisión solo desde una venta `CONFIRMED` y sin factura previa; bloqueo pesimista sobre la venta y número generado con `document_sequences` (`F-` para consumidor, `CCF-` para crédito fiscal).
+- Snapshot inmutable del cliente y de las líneas (código y nombre de producto/presentación, precio, descuento, IVA e importes); el costo promedio del lote se guarda para uso interno y no se expone.
+- `paymentCondition` de la factura debe coincidir con la venta; en crédito, `dueDate = issueDate + customer.creditDays` (mínimo 1 día).
+- Pagos con bloqueo de la factura, validación de fecha no futura, monto positivo y suma de pagos ≤ total; actualiza `paidTotal`.
+- Nota de crédito solo `ADMIN`: referencia la factura original, copia el snapshot, marca la factura y la venta como `CANCELLED` y devuelve stock solo si `returnStock = true`.
+- Seguridad aplicada: `ADMIN` y `SELLER` emiten facturas y pagos; `PURCHASING` consulta; `WAREHOUSE` no accede.
+- Pruebas unitarias de validaciones, emisión, snapshot, pagos y notas de crédito; validación E2E contra PostgreSQL local con 51 comprobaciones.

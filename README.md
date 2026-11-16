@@ -9,7 +9,8 @@ Sistema de gestión para ferretería y agroservicio. Cubre **inventario** y avan
 - **Flyway implementado**: migraciones `V1`–`V6` en `Api/api/src/main/resources/db/migration/`.
 - **CRUD de clientes implementado** en `/api/customers` con validaciones, saldo pendiente y seguridad por rol.
 - **Ventas implementadas** en `/api/sales`: creación y edición en `DRAFT`, confirmación con FEFO y bloqueo pesimista, cancelación con devolución de stock, numeración `V-AAAA-NNNNNN` y validación de crédito.
-- El esquema de facturación, pagos e imágenes ya está migrado; sus endpoints están pendientes.
+- **Facturación implementada** en `/api/invoices`: emisión desde ventas confirmadas, snapshot inmutable, CCF, pagos con control de saldo y notas de crédito con devolución opcional de stock.
+- El esquema de imágenes ya está migrado; sus endpoints están pendientes.
 - Se retiran los endpoints `/api/app/**` y el encabezado `X-Client-Interface` en el código nuevo.
 - El frontend Angular se ubicará en `web/`.
 
