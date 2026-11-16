@@ -1,8 +1,13 @@
 -- =====================================================================
--- V1__init_schema.sql
--- Esquema inicial consolidado (PostgreSQL): inventario, ventas y facturación.
+-- esquema_consolidado.sql
+-- Esquema consolidado de referencia (PostgreSQL): inventario, ventas y
+-- facturación. NO es una migración de Flyway.
 --
--- Consolida en un solo script las 5 migraciones anteriores.
+-- La fuente oficial del esquema son las migraciones V1–V6 en
+-- Api/api/src/main/resources/db/migration/. Este script se mantiene
+-- sincronizado con ellas para documentación, revisión y creación de
+-- bases de referencia.
+--
 -- 21 tablas, creadas en orden de dependencia de llaves foráneas:
 --   función de auditoría → seguridad → catálogos → productos y precios
 --   → proveedores y lotes → clientes → ventas → facturación
@@ -226,6 +231,7 @@ CREATE TABLE products (
   name                VARCHAR(150)  NOT NULL,
   description         VARCHAR(255)  NULL,
   requires_expiration BOOLEAN       NOT NULL DEFAULT FALSE,
+  tax_rate            NUMERIC(5,2)  NOT NULL DEFAULT 13.00,
   is_active           BOOLEAN       NOT NULL DEFAULT TRUE,
   created_at          TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at          TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -233,7 +239,8 @@ CREATE TABLE products (
   CONSTRAINT uq_products_code     UNIQUE (code),
   CONSTRAINT fk_products_category FOREIGN KEY (product_category_id) REFERENCES product_categories (id),
   CONSTRAINT fk_products_type     FOREIGN KEY (product_type_id)     REFERENCES product_types (id),
-  CONSTRAINT fk_products_model    FOREIGN KEY (product_model_id)    REFERENCES product_models (id)
+  CONSTRAINT fk_products_model    FOREIGN KEY (product_model_id)    REFERENCES product_models (id),
+  CONSTRAINT ck_products_tax_rate CHECK (tax_rate >= 0 AND tax_rate <= 100)
 );
 CREATE INDEX ix_products_product_category_id ON products (product_category_id);
 CREATE INDEX ix_products_product_type_id     ON products (product_type_id);
@@ -248,6 +255,7 @@ COMMENT ON COLUMN products.code                IS 'Código interno del producto 
 COMMENT ON COLUMN products.name                IS 'Nombre del producto.';
 COMMENT ON COLUMN products.description         IS 'Descripción opcional.';
 COMMENT ON COLUMN products.requires_expiration IS 'TRUE si sus lotes exigen fecha de vencimiento (químicos, semillas, pinturas). D-01, RN-08.';
+COMMENT ON COLUMN products.tax_rate            IS 'Tasa de IVA aplicable al producto (0 a 100). Por defecto 13.00; la API calcula la base con precios que ya incluyen IVA (D-02).';
 COMMENT ON COLUMN products.is_active           IS 'Borrado lógico (RN-13).';
 COMMENT ON COLUMN products.created_at          IS 'Fecha y hora de creación del registro.';
 COMMENT ON COLUMN products.updated_at          IS 'Fecha y hora de la última modificación.';
@@ -570,7 +578,8 @@ CREATE TABLE sale_details (
   CONSTRAINT ck_sale_details_line_subtotal        CHECK (line_subtotal >= 0),
   CONSTRAINT ck_sale_details_line_total           CHECK (line_total >= 0)
 );
--- sale_id no lleva índice propio: ya es la primera columna de uq_sale_details_sale_presentation.
+-- sale_id también se indexa explícitamente (igual que en Flyway V3).
+CREATE INDEX ix_sale_details_sale_id                  ON sale_details (sale_id);
 CREATE INDEX ix_sale_details_product_presentation_id ON sale_details (product_presentation_id);
 
 COMMENT ON TABLE  sale_details            IS 'Líneas de la venta con precio e IVA congelados.';
@@ -592,7 +601,8 @@ CREATE TABLE sale_lot_allocations (
   CONSTRAINT ck_sale_lot_allocations_quantity    CHECK (quantity > 0),
   CONSTRAINT ck_sale_lot_allocations_unit_cost   CHECK (unit_cost >= 0)
 );
--- sale_detail_id no lleva índice propio: ya es la primera columna de uq_sale_lot_allocations_detail_lot.
+-- sale_detail_id también se indexa explícitamente (igual que en Flyway V3).
+CREATE INDEX ix_sale_lot_allocations_sale_detail_id  ON sale_lot_allocations (sale_detail_id);
 CREATE INDEX ix_sale_lot_allocations_product_lot_id ON sale_lot_allocations (product_lot_id);
 
 COMMENT ON TABLE  sale_lot_allocations           IS 'Lotes consumidos por línea de venta. Permite devolver stock al lote correcto al cancelar.';
@@ -658,9 +668,10 @@ CREATE TABLE invoices (
     invoice_type <> 'CREDIT_NOTE' OR related_invoice_id IS NOT NULL
   )
 );
--- Una venta solo puede tener una factura emitida. Este índice único también
--- sirve para buscar por sale_id, por eso no hay un índice normal adicional.
+-- Una venta solo puede tener una factura emitida.
+-- Igual que en Flyway V4, se mantiene además un índice normal por sale_id.
 CREATE UNIQUE INDEX uq_invoices_sale_id ON invoices (sale_id) WHERE sale_id IS NOT NULL;
+CREATE INDEX ix_invoices_sale_id            ON invoices (sale_id);
 CREATE INDEX ix_invoices_customer_id        ON invoices (customer_id);
 CREATE INDEX ix_invoices_issue_date         ON invoices (issue_date);
 CREATE INDEX ix_invoices_status             ON invoices (status);
@@ -769,3 +780,15 @@ INSERT INTO roles (code, name, description) VALUES
   ('PURCHASING', 'Compras',       'Proveedores, costos de lotes, productos en bajo stock, consulta de productos, lotes, ventas y facturas.'),
   ('SELLER',     'Vendedor',      'Clientes, ventas propias, emisión de facturas y registro de pagos. No ve costos ni proveedores.')
 ON CONFLICT (code) DO NOTHING;
+
+-- ---------------------------------------------------------------------
+-- Secuencias iniciales del año en curso (V6).
+-- El servicio de numeración crea la fila del año nuevo si no existe.
+-- ---------------------------------------------------------------------
+INSERT INTO document_sequences (document_type, prefix, year, current_number)
+VALUES
+  ('SALE',        'V-',   EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER, 0),
+  ('INVOICE',     'F-',   EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER, 0),
+  ('CCF',         'CCF-', EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER, 0),
+  ('CREDIT_NOTE', 'NC-',  EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER, 0)
+ON CONFLICT (document_type, year) DO NOTHING;

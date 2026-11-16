@@ -100,7 +100,7 @@ Controller → Service → Repository → PostgreSQL
 
 ### 4.1 Fuente del esquema
 
-La fuente oficial del esquema es **Flyway**. Los archivos de `Base_datos/` quedan como referencia histórica del esquema anterior.
+La fuente oficial del esquema es **Flyway**. Los archivos de `Base_datos/` son referencia sincronizada del modelo de datos.
 
 Migraciones implementadas en `src/main/resources/db/migration/`:
 
@@ -342,5 +342,5 @@ cd Api/api
 - [`../Implementacion.md`](../Implementacion.md): plan de la nueva etapa.
 - [`../MEMORY.md`](../MEMORY.md): decisiones y estado.
 - [`../Documentacion/Diagramas/Endpoints-API.md`](../Documentacion/Diagramas/Endpoints-API.md): contrato REST.
-- [`../Base_datos/`](../Base_datos/): esquema anterior, referencia del baseline.
+- [`../Base_datos/`](../Base_datos/): esquema consolidado de referencia, MER y diccionario.
 - [`../AGENTS.md`](../AGENTS.md): reglas para agentes y desarrolladores.

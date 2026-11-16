@@ -1,7 +1,7 @@
 # MEMORY.md — TAMACHIHUA-ERP
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
-> Última actualización: 14/11/2026.
+> Última actualización: 16/11/2026.
 > Estado: Fases 2, 3 y 4 completadas (Flyway V1–V6, CRUD de clientes y ventas con FEFO); API validada con `validate`, pruebas unitarias y E2E de endpoints.
 
 ## 1. Resumen
@@ -34,7 +34,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Documentación del backend en `Api/README.md`.
 - Plan aprobado en `Implementacion.md`.
 - Contrato REST v2.0 en `Documentacion/Diagramas/Endpoints-API.md`.
-- `Base_datos/01_create_tables.sql` y `02_seed_data.sql` quedaron como referencia histórica.
+- `Base_datos/esquema_consolidado.sql` es el script consolidado de referencia y `Base_datos/Script.pdf` el MER completo (2 páginas).
 - **Flyway implementado** en `Api/api/src/main/resources/db/migration/` con `V1`–`V6`.
 - 21 tablas de negocio: las 13 originales más `customers`, `document_sequences`, `sales`, `sale_details`, `sale_lot_allocations`, `invoices`, `invoice_details` e `invoice_payments`.
 - Migraciones aplicadas y verificadas en dos escenarios: esquema existente (baseline V1 + V2–V6) y esquema vacío (V1–V6).
@@ -84,6 +84,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - `SELLER` solo ve y opera sus propias ventas; `ADMIN` ve todas; `WAREHOUSE` y `PURCHASING` consultan.
 - Pruebas unitarias: `SaleTotalsCalculatorTest`, `SaleRequestDtoValidationTest` y `SaleServiceImplTest`, en verde.
 - Validación E2E contra PostgreSQL local: 53 comprobaciones de totales, FEFO, stock, cancelación, crédito, numeración, visibilidad y permisos, todas en verde.
+- `Base_datos/esquema_consolidado.sql` corregido (D-14): se agregaron `products.tax_rate`, `ck_products_tax_rate`, `ix_invoices_sale_id`, `ix_sale_details_sale_id`, `ix_sale_lot_allocations_sale_detail_id` y las secuencias iniciales; se validó contra la base migrada comparando columnas, restricciones e índices.
 
 ### Documentación completada en esta rama
 
@@ -93,8 +94,8 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - `README.md` raíz actualizado.
 - `Api/README.md` reescrito sin Vue/Ionic, con Flyway y flujo Angular.
 - `Documentacion/Diagramas/Endpoints-API.md` en v2.0 con clientes, ventas, facturación y pagos.
-- `Base_datos/README.md` que marca la carpeta como referencia histórica.
-- Encabezado de `Base_datos/01_create_tables.sql` actualizado para indicar que Flyway es la fuente oficial.
+- `Base_datos/README.md` describe el esquema consolidado, el MER y el diccionario de datos.
+- `Base_datos/esquema_consolidado.sql` validado contra la base migrada por Flyway: mismas tablas, columnas, restricciones e índices.
 
 ## 4. Decisiones aprobadas
 
@@ -113,6 +114,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-11 | Mantener la arquitectura por capas (`controller`, `service`, `repository`, `entity`, `mapper`, `dto`); los DTO por dominio usan subpaquetes (`dto/customer`) y no se crean paquetes raíz por funcionalidad | Aplicada |
 | D-12 | Los totales de venta se derivan de precios con IVA incluido; `discount` es un importe y la base se obtiene con `lineTotal / (1 + taxRate/100)` | Aplicada |
 | D-13 | La numeración de ventas usa `document_sequences` con `INSERT ... ON CONFLICT` y `SELECT ... FOR UPDATE` para serializar concurrencia | Aplicada |
+| D-14 | Flyway `V1`–`V6` sigue siendo la fuente oficial del esquema; `Base_datos/esquema_consolidado.sql` es una referencia sincronizada, no una migración | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -208,7 +210,7 @@ Control_inventario/
 ├── Api/
 │   ├── README.md
 │   └── api/                 # Backend Spring Boot
-├── Base_datos/              # Esquema histórico + README de referencia
+├── Base_datos/              # Esquema consolidado de referencia + MER + diccionario
 ├── Documentacion/           # Contrato, diagramas y logo
 └── web/                     # Angular (futuro)
 ```
@@ -239,7 +241,7 @@ Variables requeridas: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` (Base
 - `Implementacion.md`: plan detallado de la nueva etapa.
 - `Api/README.md`: guía del backend, configuración, Flyway y endpoints.
 - `Documentacion/Diagramas/Endpoints-API.md`: contrato REST v2.0.
-- `Base_datos/`: esquema y datos históricos; `README.md` explica su uso como referencia del baseline.
+- `Base_datos/`: esquema consolidado de referencia, MER y diccionario; `README.md` explica su relación con Flyway.
 - `AGENTS.md`: reglas para agentes.
 
 ## 12. Pendientes técnicos
