@@ -1,66 +1,19 @@
 -- =====================================================================
--- TAMACHIHUA-ERP · Módulo de Inventario
--- 01_create_tables.sql — Creación de tablas, llaves y restricciones
+-- esquema_consolidado.sql
+-- Esquema consolidado de referencia (PostgreSQL): inventario, ventas y
+-- facturación. NO es una migración de Flyway.
 --
--- Motor ........ PostgreSQL 12 o superior (probado en PostgreSQL 16)
--- Tarea ........ S2-02 (T-08) · Sprint 2 · grupo TDSV221, ITCA-FEPADE
--- Autor ........ Ali Velásquez (base de datos) · apoyo: Marvin Gómez (API)
--- Fecha ........ 02/11/2026
--- Base ......... MER v1.5 (01/11/2026) + contrato Endpoints-API.md v1.1
+-- La fuente oficial del esquema son las migraciones V1–V6 en
+-- Api/api/src/main/resources/db/migration/. Este script se mantiene
+-- sincronizado con ellas para documentación, revisión y creación de
+-- bases de referencia.
 --
--- REFERENCIA HISTÓRICA. La fuente oficial del esquema pasa a ser Flyway
--- (Api/api/src/main/resources/db/migration). Este script se conserva para
--- construir V1__baseline_inventory.sql. La API mantiene
--- spring.jpa.hibernate.ddl-auto=validate.
---
--- Decisiones aplicadas respecto al MER v1.5 (pasan al MER v1.6):
---   P-01  products_presentations  ->  product_presentations
---   P-07  lote único por proveedor + número de lote + presentación
---   P-11  índice único parcial de precio vigente, CHECK de cantidades y
---         precios, notes VARCHAR(200)
---   ·     product_lots.total_cost es columna generada (STORED)
---   ·     nombres de catálogos únicos sin distinguir mayúsculas (lower)
---   ·     is_active NOT NULL DEFAULT TRUE; created_at/updated_at NOT NULL
---         y mantenidos por el trigger set_audit_timestamps()
---
--- Orden de creación (por dependencias):
---   1 roles  2 users  3 product_categories  4 product_types
---   5 product_brands  6 product_models  7 measure_units  8 presentations
---   9 products  10 product_presentations  11 product_prices
---   12 suppliers  13 product_lots
---
--- Uso:   psql -U <usuario> -d <base> -v ON_ERROR_STOP=1 -f 01_create_tables.sql
--- AVISO: el bloque 0 borra las 13 tablas si ya existen (deja la base
---        limpia para volver a ejecutar). No lo ejecute sobre datos reales.
+-- 21 tablas, creadas en orden de dependencia de llaves foráneas:
+--   función de auditoría → seguridad → catálogos → productos y precios
+--   → proveedores y lotes → clientes → ventas → facturación
+--   → triggers de auditoría → datos base.
 -- =====================================================================
-SET client_encoding = 'UTF8';   -- el archivo está en UTF-8: evita que Windows (WIN1252) guarde mal las tildes
 
-SET client_min_messages = warning;   -- oculta los avisos "does not exist, skipping"
-
-BEGIN;
-
--- ---------------------------------------------------------------------
--- 0. Limpieza (orden inverso) para poder re-ejecutar el script
--- ---------------------------------------------------------------------
-DROP TABLE IF EXISTS product_lots           CASCADE;
-DROP TABLE IF EXISTS suppliers              CASCADE;
-DROP TABLE IF EXISTS product_prices         CASCADE;
-DROP TABLE IF EXISTS product_presentations  CASCADE;
-DROP TABLE IF EXISTS products               CASCADE;
-DROP TABLE IF EXISTS presentations          CASCADE;
-DROP TABLE IF EXISTS measure_units          CASCADE;
-DROP TABLE IF EXISTS product_models         CASCADE;
-DROP TABLE IF EXISTS product_brands         CASCADE;
-DROP TABLE IF EXISTS product_types          CASCADE;
-DROP TABLE IF EXISTS product_categories     CASCADE;
-DROP TABLE IF EXISTS users                  CASCADE;
-DROP TABLE IF EXISTS roles                  CASCADE;
-DROP FUNCTION IF EXISTS set_audit_timestamps() CASCADE;
-
--- ---------------------------------------------------------------------
--- Función de auditoría: completa created_at/updated_at al insertar
--- (aunque la API envíe NULL) y actualiza updated_at en cada UPDATE.
--- ---------------------------------------------------------------------
 CREATE FUNCTION set_audit_timestamps() RETURNS trigger
 LANGUAGE plpgsql AS $$
 BEGIN
@@ -76,7 +29,7 @@ END;
 $$;
 
 COMMENT ON FUNCTION set_audit_timestamps() IS
-  'Mantiene created_at (inmutable) y updated_at (fecha de la última modificación) en las 13 tablas.';
+  'Mantiene created_at (inmutable) y updated_at (fecha de la última modificación) en las tablas con auditoría completa (ver bloque de triggers al final).';
 
 -- =====================================================================
 -- SEGURIDAD
@@ -278,6 +231,7 @@ CREATE TABLE products (
   name                VARCHAR(150)  NOT NULL,
   description         VARCHAR(255)  NULL,
   requires_expiration BOOLEAN       NOT NULL DEFAULT FALSE,
+  tax_rate            NUMERIC(5,2)  NOT NULL DEFAULT 13.00,
   is_active           BOOLEAN       NOT NULL DEFAULT TRUE,
   created_at          TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at          TIMESTAMP     NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -285,7 +239,8 @@ CREATE TABLE products (
   CONSTRAINT uq_products_code     UNIQUE (code),
   CONSTRAINT fk_products_category FOREIGN KEY (product_category_id) REFERENCES product_categories (id),
   CONSTRAINT fk_products_type     FOREIGN KEY (product_type_id)     REFERENCES product_types (id),
-  CONSTRAINT fk_products_model    FOREIGN KEY (product_model_id)    REFERENCES product_models (id)
+  CONSTRAINT fk_products_model    FOREIGN KEY (product_model_id)    REFERENCES product_models (id),
+  CONSTRAINT ck_products_tax_rate CHECK (tax_rate >= 0 AND tax_rate <= 100)
 );
 CREATE INDEX ix_products_product_category_id ON products (product_category_id);
 CREATE INDEX ix_products_product_type_id     ON products (product_type_id);
@@ -300,6 +255,7 @@ COMMENT ON COLUMN products.code                IS 'Código interno del producto 
 COMMENT ON COLUMN products.name                IS 'Nombre del producto.';
 COMMENT ON COLUMN products.description         IS 'Descripción opcional.';
 COMMENT ON COLUMN products.requires_expiration IS 'TRUE si sus lotes exigen fecha de vencimiento (químicos, semillas, pinturas). D-01, RN-08.';
+COMMENT ON COLUMN products.tax_rate            IS 'Tasa de IVA aplicable al producto (0 a 100). Por defecto 13.00; la API calcula la base con precios que ya incluyen IVA (D-02).';
 COMMENT ON COLUMN products.is_active           IS 'Borrado lógico (RN-13).';
 COMMENT ON COLUMN products.created_at          IS 'Fecha y hora de creación del registro.';
 COMMENT ON COLUMN products.updated_at          IS 'Fecha y hora de la última modificación.';
@@ -311,6 +267,8 @@ CREATE TABLE product_presentations (
   presentation_id BIGINT         NOT NULL,
   code            VARCHAR(50)    NOT NULL,
   min_stock       NUMERIC(12,2)  NOT NULL,
+  image_url       VARCHAR(500)   NULL,
+  image_alt       VARCHAR(150)   NULL,
   is_active       BOOLEAN        NOT NULL DEFAULT TRUE,
   created_at      TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -329,6 +287,8 @@ COMMENT ON COLUMN product_presentations.product_id      IS 'Producto (FK a produ
 COMMENT ON COLUMN product_presentations.presentation_id IS 'Presentación (FK a presentations). La combinación producto + presentación es única.';
 COMMENT ON COLUMN product_presentations.code            IS 'Código de la presentación del producto (p. ej. FER-001-CJ25). Único en todo el sistema; se usa en la búsqueda de la app.';
 COMMENT ON COLUMN product_presentations.min_stock       IS 'Stock mínimo de esta presentación. Mayor que cero. Bajo stock si existencia <= mínimo (RN-10).';
+COMMENT ON COLUMN product_presentations.image_url       IS 'URL o ruta relativa de la imagen. Máximo 500 caracteres.';
+COMMENT ON COLUMN product_presentations.image_alt       IS 'Texto alternativo de la imagen. Máximo 150 caracteres.';
 COMMENT ON COLUMN product_presentations.is_active       IS 'Borrado lógico.';
 COMMENT ON COLUMN product_presentations.created_at      IS 'Fecha y hora de creación del registro.';
 COMMENT ON COLUMN product_presentations.updated_at      IS 'Fecha y hora de la última modificación.';
@@ -457,23 +417,378 @@ COMMENT ON COLUMN product_lots.is_active               IS 'Borrado lógico.';
 COMMENT ON COLUMN product_lots.created_at              IS 'Fecha y hora de creación del registro.';
 COMMENT ON COLUMN product_lots.updated_at              IS 'Fecha y hora de la última modificación.';
 
--- ---------------------------------------------------------------------
--- Triggers de auditoría en las 13 tablas
--- ---------------------------------------------------------------------
-CREATE TRIGGER trg_roles_audit                 BEFORE INSERT OR UPDATE ON roles                 FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_users_audit                 BEFORE INSERT OR UPDATE ON users                 FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_product_categories_audit    BEFORE INSERT OR UPDATE ON product_categories    FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_product_types_audit         BEFORE INSERT OR UPDATE ON product_types         FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_product_brands_audit        BEFORE INSERT OR UPDATE ON product_brands        FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_product_models_audit        BEFORE INSERT OR UPDATE ON product_models        FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_measure_units_audit         BEFORE INSERT OR UPDATE ON measure_units         FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_presentations_audit         BEFORE INSERT OR UPDATE ON presentations         FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_products_audit              BEFORE INSERT OR UPDATE ON products              FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_product_presentations_audit BEFORE INSERT OR UPDATE ON product_presentations FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_product_prices_audit        BEFORE INSERT OR UPDATE ON product_prices        FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_suppliers_audit             BEFORE INSERT OR UPDATE ON suppliers             FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
-CREATE TRIGGER trg_product_lots_audit          BEFORE INSERT OR UPDATE ON product_lots          FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+-- =====================================================================
+-- CLIENTES
+-- =====================================================================
 
-COMMIT;
+-- 14. customers -------------------------------------------------------
+CREATE TABLE customers (
+  id               BIGSERIAL      NOT NULL,
+  customer_type    VARCHAR(20)    NOT NULL,
+  document_type    VARCHAR(10)    NULL,
+  document_number  VARCHAR(20)    NULL,
+  legal_name       VARCHAR(200)   NOT NULL,
+  trade_name       VARCHAR(200)   NULL,
+  nit              VARCHAR(17)    NULL,
+  nrc              VARCHAR(10)    NULL,
+  dui              VARCHAR(10)    NULL,
+  address          VARCHAR(255)   NULL,
+  phone            VARCHAR(20)    NULL,
+  email            VARCHAR(150)   NULL,
+  credit_limit     NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  credit_days      INTEGER        NOT NULL DEFAULT 0,
+  is_active        BOOLEAN        NOT NULL DEFAULT TRUE,
+  created_at       TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at       TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_customers               PRIMARY KEY (id),
+  CONSTRAINT ck_customers_type          CHECK (customer_type IN ('NATURAL', 'BUSINESS')),
+  CONSTRAINT ck_customers_document_type CHECK (
+    document_type IS NULL OR document_type IN ('DUI', 'NIT', 'PASSPORT', 'FOREIGN')
+  ),
+  CONSTRAINT ck_customers_credit_limit  CHECK (credit_limit >= 0),
+  CONSTRAINT ck_customers_credit_days   CHECK (credit_days >= 0)
+);
+-- Documentos y correo únicos solo cuando vienen informados.
+CREATE UNIQUE INDEX uq_customers_document_number ON customers (document_number) WHERE document_number IS NOT NULL;
+CREATE UNIQUE INDEX uq_customers_nit             ON customers (nit)             WHERE nit IS NOT NULL;
+CREATE UNIQUE INDEX uq_customers_nrc             ON customers (nrc)             WHERE nrc IS NOT NULL;
+CREATE UNIQUE INDEX uq_customers_dui             ON customers (dui)             WHERE dui IS NOT NULL;
+CREATE UNIQUE INDEX uq_customers_email           ON customers (lower(email))    WHERE email IS NOT NULL;
+CREATE INDEX ix_customers_legal_name ON customers (lower(legal_name));
+CREATE INDEX ix_customers_is_active  ON customers (is_active);
 
--- Fin de 01_create_tables.sql
+COMMENT ON TABLE  customers                 IS 'Clientes naturales y jurídicos (Endpoints-API.md §10).';
+COMMENT ON COLUMN customers.customer_type   IS 'NATURAL o BUSINESS.';
+COMMENT ON COLUMN customers.document_type   IS 'DUI, NIT, PASSPORT o FOREIGN. Opcional.';
+COMMENT ON COLUMN customers.document_number IS 'Número de documento. Único cuando no es nulo.';
+COMMENT ON COLUMN customers.legal_name      IS 'Nombre o razón social. Obligatorio.';
+COMMENT ON COLUMN customers.trade_name      IS 'Nombre comercial. Opcional.';
+COMMENT ON COLUMN customers.nit             IS 'NIT. Único cuando no es nulo.';
+COMMENT ON COLUMN customers.nrc             IS 'NRC. Único cuando no es nulo.';
+COMMENT ON COLUMN customers.dui             IS 'DUI. Único cuando no es nulo.';
+COMMENT ON COLUMN customers.email           IS 'Correo. Único sin distinguir mayúsculas cuando no es nulo.';
+COMMENT ON COLUMN customers.credit_limit    IS 'Límite de crédito en US$. Cero o positivo.';
+COMMENT ON COLUMN customers.credit_days     IS 'Días de crédito otorgados. Cero o positivo.';
+COMMENT ON COLUMN customers.is_active       IS 'Borrado lógico: FALSE = cliente desactivado.';
+
+-- =====================================================================
+-- VENTAS
+-- =====================================================================
+
+-- 15. document_sequences ----------------------------------------------
+CREATE TABLE document_sequences (
+  id             BIGSERIAL    NOT NULL,
+  document_type  VARCHAR(20)  NOT NULL,
+  prefix         VARCHAR(10)  NOT NULL,
+  year           INTEGER      NOT NULL,
+  current_number BIGINT       NOT NULL DEFAULT 0,
+  version        BIGINT       NOT NULL DEFAULT 0,
+  created_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at     TIMESTAMP    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_document_sequences           PRIMARY KEY (id),
+  CONSTRAINT uq_document_sequences_type_year UNIQUE (document_type, year),
+  CONSTRAINT ck_document_sequences_type      CHECK (document_type IN ('SALE', 'INVOICE', 'CCF', 'CREDIT_NOTE')),
+  CONSTRAINT ck_document_sequences_year      CHECK (year >= 2000),
+  CONSTRAINT ck_document_sequences_number    CHECK (current_number >= 0),
+  CONSTRAINT ck_document_sequences_version   CHECK (version >= 0)
+);
+
+COMMENT ON TABLE  document_sequences                IS 'Correlativos por tipo de documento y año. Se leen con SELECT ... FOR UPDATE.';
+COMMENT ON COLUMN document_sequences.document_type  IS 'SALE, INVOICE, CCF o CREDIT_NOTE.';
+COMMENT ON COLUMN document_sequences.prefix         IS 'Prefijo del número: V-, F-, CCF-, NC-.';
+COMMENT ON COLUMN document_sequences.year           IS 'Año del correlativo.';
+COMMENT ON COLUMN document_sequences.current_number IS 'Último número emitido.';
+COMMENT ON COLUMN document_sequences.version        IS 'Control de concurrencia optimista.';
+
+-- 16. sales -----------------------------------------------------------
+CREATE TABLE sales (
+  id                BIGSERIAL      NOT NULL,
+  sale_number       VARCHAR(30)    NOT NULL,
+  customer_id       BIGINT         NULL,
+  user_id           BIGINT         NOT NULL,
+  sale_date         TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  status            VARCHAR(20)    NOT NULL,
+  payment_condition VARCHAR(20)    NOT NULL,
+  payment_method    VARCHAR(20)    NULL,
+  subtotal          NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  discount_total    NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  tax_total         NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  total             NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  paid_total        NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  notes             VARCHAR(255)   NULL,
+  cancelled_at      TIMESTAMP      NULL,
+  cancelled_by      BIGINT         NULL,
+  cancel_reason     VARCHAR(255)   NULL,
+  created_at        TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at        TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_sales                   PRIMARY KEY (id),
+  CONSTRAINT uq_sales_number            UNIQUE (sale_number),
+  CONSTRAINT fk_sales_customer          FOREIGN KEY (customer_id)  REFERENCES customers (id),
+  CONSTRAINT fk_sales_user              FOREIGN KEY (user_id)      REFERENCES users (id),
+  CONSTRAINT fk_sales_cancelled_by      FOREIGN KEY (cancelled_by) REFERENCES users (id),
+  CONSTRAINT ck_sales_status            CHECK (status IN ('DRAFT', 'CONFIRMED', 'CANCELLED')),
+  CONSTRAINT ck_sales_payment_condition CHECK (payment_condition IN ('CASH', 'CREDIT')),
+  CONSTRAINT ck_sales_payment_method    CHECK (
+    payment_method IS NULL OR payment_method IN ('CASH', 'CARD', 'TRANSFER', 'OTHER')
+  ),
+  CONSTRAINT ck_sales_subtotal          CHECK (subtotal >= 0),
+  CONSTRAINT ck_sales_discount_total    CHECK (discount_total >= 0),
+  CONSTRAINT ck_sales_tax_total         CHECK (tax_total >= 0),
+  CONSTRAINT ck_sales_total             CHECK (total >= 0),
+  CONSTRAINT ck_sales_paid_total        CHECK (paid_total >= 0)
+);
+CREATE INDEX ix_sales_customer_id ON sales (customer_id);
+CREATE INDEX ix_sales_user_id     ON sales (user_id);
+CREATE INDEX ix_sales_sale_date   ON sales (sale_date);
+CREATE INDEX ix_sales_status      ON sales (status);
+
+COMMENT ON TABLE  sales                   IS 'Ventas del ERP. Estado: DRAFT → CONFIRMED → CANCELLED.';
+COMMENT ON COLUMN sales.sale_number       IS 'Número generado por document_sequences. Único.';
+COMMENT ON COLUMN sales.customer_id       IS 'Cliente. Nulo para consumidor final.';
+COMMENT ON COLUMN sales.user_id           IS 'Vendedor tomado del JWT, nunca del body.';
+COMMENT ON COLUMN sales.status            IS 'DRAFT, CONFIRMED o CANCELLED.';
+COMMENT ON COLUMN sales.payment_condition IS 'CASH o CREDIT.';
+COMMENT ON COLUMN sales.payment_method    IS 'CASH, CARD, TRANSFER u OTHER. Opcional.';
+COMMENT ON COLUMN sales.paid_total        IS 'Total pagado a nivel de venta.';
+
+-- 17. sale_details ----------------------------------------------------
+CREATE TABLE sale_details (
+  id                      BIGSERIAL      NOT NULL,
+  sale_id                 BIGINT         NOT NULL,
+  product_presentation_id BIGINT         NOT NULL,
+  quantity                NUMERIC(12,2)  NOT NULL,
+  unit_price              NUMERIC(10,2)  NOT NULL,
+  discount                NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  tax_rate                NUMERIC(5,2)   NOT NULL DEFAULT 13.00,
+  tax_amount              NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  line_subtotal           NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  line_total              NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  created_at              TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at              TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_sale_details                      PRIMARY KEY (id),
+  CONSTRAINT uq_sale_details_sale_presentation    UNIQUE (sale_id, product_presentation_id),
+  CONSTRAINT fk_sale_details_sale                 FOREIGN KEY (sale_id) REFERENCES sales (id),
+  CONSTRAINT fk_sale_details_product_presentation FOREIGN KEY (product_presentation_id)
+    REFERENCES product_presentations (id),
+  CONSTRAINT ck_sale_details_quantity             CHECK (quantity > 0),
+  CONSTRAINT ck_sale_details_unit_price           CHECK (unit_price > 0),
+  CONSTRAINT ck_sale_details_discount             CHECK (discount >= 0),
+  CONSTRAINT ck_sale_details_tax_rate             CHECK (tax_rate >= 0 AND tax_rate <= 100),
+  CONSTRAINT ck_sale_details_tax_amount           CHECK (tax_amount >= 0),
+  CONSTRAINT ck_sale_details_line_subtotal        CHECK (line_subtotal >= 0),
+  CONSTRAINT ck_sale_details_line_total           CHECK (line_total >= 0)
+);
+-- sale_id también se indexa explícitamente (igual que en Flyway V3).
+CREATE INDEX ix_sale_details_sale_id                  ON sale_details (sale_id);
+CREATE INDEX ix_sale_details_product_presentation_id ON sale_details (product_presentation_id);
+
+COMMENT ON TABLE  sale_details            IS 'Líneas de la venta con precio e IVA congelados.';
+COMMENT ON COLUMN sale_details.unit_price IS 'Precio de venta congelado al momento de la venta.';
+
+-- 18. sale_lot_allocations --------------------------------------------
+--     Asignación de lotes (FEFO). Sin updated_at: solo se inserta y se lee.
+CREATE TABLE sale_lot_allocations (
+  id             BIGSERIAL      NOT NULL,
+  sale_detail_id BIGINT         NOT NULL,
+  product_lot_id BIGINT         NOT NULL,
+  quantity       NUMERIC(12,2)  NOT NULL,
+  unit_cost      NUMERIC(10,2)  NOT NULL,
+  created_at     TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_sale_lot_allocations             PRIMARY KEY (id),
+  CONSTRAINT uq_sale_lot_allocations_detail_lot  UNIQUE (sale_detail_id, product_lot_id),
+  CONSTRAINT fk_sale_lot_allocations_sale_detail FOREIGN KEY (sale_detail_id) REFERENCES sale_details (id),
+  CONSTRAINT fk_sale_lot_allocations_product_lot FOREIGN KEY (product_lot_id) REFERENCES product_lots (id),
+  CONSTRAINT ck_sale_lot_allocations_quantity    CHECK (quantity > 0),
+  CONSTRAINT ck_sale_lot_allocations_unit_cost   CHECK (unit_cost >= 0)
+);
+-- sale_detail_id también se indexa explícitamente (igual que en Flyway V3).
+CREATE INDEX ix_sale_lot_allocations_sale_detail_id  ON sale_lot_allocations (sale_detail_id);
+CREATE INDEX ix_sale_lot_allocations_product_lot_id ON sale_lot_allocations (product_lot_id);
+
+COMMENT ON TABLE  sale_lot_allocations           IS 'Lotes consumidos por línea de venta. Permite devolver stock al lote correcto al cancelar.';
+COMMENT ON COLUMN sale_lot_allocations.unit_cost IS 'Costo unitario congelado del lote. Solo uso interno.';
+
+-- =====================================================================
+-- FACTURACIÓN
+-- =====================================================================
+
+-- 19. invoices --------------------------------------------------------
+CREATE TABLE invoices (
+  id                       BIGSERIAL      NOT NULL,
+  invoice_number           VARCHAR(30)    NOT NULL,
+  control_number           VARCHAR(30)    NULL,
+  invoice_type             VARCHAR(20)    NOT NULL,
+  sale_id                  BIGINT         NULL,
+  customer_id              BIGINT         NULL,
+  related_invoice_id       BIGINT         NULL,
+  issue_date               DATE           NOT NULL,
+  due_date                 DATE           NULL,
+  status                   VARCHAR(20)    NOT NULL,
+  payment_condition        VARCHAR(20)    NOT NULL,
+  subtotal                 NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  discount_total           NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  tax_total                NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  total                    NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  paid_total               NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  customer_name            VARCHAR(200)   NOT NULL,
+  customer_document_type   VARCHAR(10)    NULL,
+  customer_document_number VARCHAR(20)    NULL,
+  customer_nit             VARCHAR(17)    NULL,
+  customer_nrc             VARCHAR(10)    NULL,
+  customer_address         VARCHAR(255)   NULL,
+  customer_email           VARCHAR(150)   NULL,
+  notes                    VARCHAR(255)   NULL,
+  cancelled_at             TIMESTAMP      NULL,
+  cancelled_by             BIGINT         NULL,
+  cancel_reason            VARCHAR(255)   NULL,
+  created_by               BIGINT         NOT NULL,
+  created_at               TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at               TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_invoices                   PRIMARY KEY (id),
+  CONSTRAINT uq_invoices_number            UNIQUE (invoice_number),
+  CONSTRAINT uq_invoices_control_number    UNIQUE (control_number),
+  CONSTRAINT fk_invoices_sale              FOREIGN KEY (sale_id)            REFERENCES sales (id),
+  CONSTRAINT fk_invoices_customer          FOREIGN KEY (customer_id)        REFERENCES customers (id),
+  CONSTRAINT fk_invoices_related           FOREIGN KEY (related_invoice_id) REFERENCES invoices (id),
+  CONSTRAINT fk_invoices_cancelled_by      FOREIGN KEY (cancelled_by)       REFERENCES users (id),
+  CONSTRAINT fk_invoices_created_by        FOREIGN KEY (created_by)         REFERENCES users (id),
+  CONSTRAINT ck_invoices_type              CHECK (invoice_type IN ('CONSUMER', 'CCF', 'CREDIT_NOTE')),
+  CONSTRAINT ck_invoices_status            CHECK (status IN ('DRAFT', 'ISSUED', 'CANCELLED')),
+  CONSTRAINT ck_invoices_payment_condition CHECK (payment_condition IN ('CASH', 'CREDIT')),
+  CONSTRAINT ck_invoices_subtotal          CHECK (subtotal >= 0),
+  CONSTRAINT ck_invoices_discount_total    CHECK (discount_total >= 0),
+  CONSTRAINT ck_invoices_tax_total         CHECK (tax_total >= 0),
+  CONSTRAINT ck_invoices_total             CHECK (total >= 0),
+  CONSTRAINT ck_invoices_paid_total        CHECK (paid_total >= 0),
+  CONSTRAINT ck_invoices_dates             CHECK (due_date IS NULL OR due_date >= issue_date),
+  CONSTRAINT ck_invoices_credit_due_date   CHECK (
+    payment_condition <> 'CREDIT' OR due_date IS NOT NULL
+  ),
+  CONSTRAINT ck_invoices_credit_note_related CHECK (
+    invoice_type <> 'CREDIT_NOTE' OR related_invoice_id IS NOT NULL
+  )
+);
+-- Una venta solo puede tener una factura emitida.
+-- Igual que en Flyway V4, se mantiene además un índice normal por sale_id.
+CREATE UNIQUE INDEX uq_invoices_sale_id ON invoices (sale_id) WHERE sale_id IS NOT NULL;
+CREATE INDEX ix_invoices_sale_id            ON invoices (sale_id);
+CREATE INDEX ix_invoices_customer_id        ON invoices (customer_id);
+CREATE INDEX ix_invoices_issue_date         ON invoices (issue_date);
+CREATE INDEX ix_invoices_status             ON invoices (status);
+CREATE INDEX ix_invoices_related_invoice_id ON invoices (related_invoice_id);
+
+COMMENT ON TABLE  invoices                    IS 'Facturas emitidas. Inmutables: se cancelan con nota de crédito.';
+COMMENT ON COLUMN invoices.invoice_number     IS 'Correlativo por tipo y año, generado con document_sequences.';
+COMMENT ON COLUMN invoices.control_number     IS 'Número de control para CCF preimpreso. Opcional y único.';
+COMMENT ON COLUMN invoices.invoice_type       IS 'CONSUMER, CCF o CREDIT_NOTE.';
+COMMENT ON COLUMN invoices.related_invoice_id IS 'Factura original cuando el documento es nota de crédito.';
+COMMENT ON COLUMN invoices.status             IS 'DRAFT, ISSUED o CANCELLED.';
+COMMENT ON COLUMN invoices.customer_name      IS 'Snapshot fiscal del nombre del cliente al emitir.';
+
+-- 20. invoice_details -------------------------------------------------
+--     Snapshot inmutable de las líneas. Sin updated_at: solo se inserta y se lee.
+CREATE TABLE invoice_details (
+  id                      BIGSERIAL      NOT NULL,
+  invoice_id              BIGINT         NOT NULL,
+  product_presentation_id BIGINT         NULL,
+  product_code            VARCHAR(50)    NOT NULL,
+  product_name            VARCHAR(150)   NOT NULL,
+  presentation_code       VARCHAR(50)    NOT NULL,
+  presentation_name       VARCHAR(100)   NOT NULL,
+  quantity                NUMERIC(12,2)  NOT NULL,
+  unit_price              NUMERIC(10,2)  NOT NULL,
+  discount                NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  tax_rate                NUMERIC(5,2)   NOT NULL DEFAULT 13.00,
+  tax_amount              NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  line_subtotal           NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  line_total              NUMERIC(12,2)  NOT NULL DEFAULT 0,
+  unit_cost               NUMERIC(10,2)  NULL,
+  created_at              TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_invoice_details                      PRIMARY KEY (id),
+  CONSTRAINT fk_invoice_details_invoice              FOREIGN KEY (invoice_id) REFERENCES invoices (id),
+  CONSTRAINT fk_invoice_details_product_presentation FOREIGN KEY (product_presentation_id)
+    REFERENCES product_presentations (id),
+  CONSTRAINT ck_invoice_details_quantity             CHECK (quantity > 0),
+  CONSTRAINT ck_invoice_details_unit_price           CHECK (unit_price > 0),
+  CONSTRAINT ck_invoice_details_discount             CHECK (discount >= 0),
+  CONSTRAINT ck_invoice_details_tax_rate             CHECK (tax_rate >= 0 AND tax_rate <= 100),
+  CONSTRAINT ck_invoice_details_tax_amount           CHECK (tax_amount >= 0),
+  CONSTRAINT ck_invoice_details_line_subtotal        CHECK (line_subtotal >= 0),
+  CONSTRAINT ck_invoice_details_line_total           CHECK (line_total >= 0),
+  CONSTRAINT ck_invoice_details_unit_cost            CHECK (unit_cost IS NULL OR unit_cost >= 0)
+);
+CREATE INDEX ix_invoice_details_invoice_id              ON invoice_details (invoice_id);
+CREATE INDEX ix_invoice_details_product_presentation_id ON invoice_details (product_presentation_id);
+
+COMMENT ON TABLE  invoice_details           IS 'Snapshot de las líneas de la factura.';
+COMMENT ON COLUMN invoice_details.unit_cost IS 'Costo congelado. Solo uso interno; no se expone a roles no autorizados.';
+
+-- 21. invoice_payments ------------------------------------------------
+--     Sin updated_at: los pagos no se editan.
+CREATE TABLE invoice_payments (
+  id             BIGSERIAL      NOT NULL,
+  invoice_id     BIGINT         NOT NULL,
+  payment_date   DATE           NOT NULL,
+  amount         NUMERIC(12,2)  NOT NULL,
+  payment_method VARCHAR(20)    NOT NULL,
+  reference      VARCHAR(50)    NULL,
+  notes          VARCHAR(255)   NULL,
+  user_id        BIGINT         NOT NULL,
+  created_at     TIMESTAMP      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT pk_invoice_payments         PRIMARY KEY (id),
+  CONSTRAINT fk_invoice_payments_invoice FOREIGN KEY (invoice_id) REFERENCES invoices (id),
+  CONSTRAINT fk_invoice_payments_user    FOREIGN KEY (user_id)    REFERENCES users (id),
+  CONSTRAINT ck_invoice_payments_amount  CHECK (amount > 0),
+  CONSTRAINT ck_invoice_payments_method  CHECK (payment_method IN ('CASH', 'CARD', 'TRANSFER', 'CHECK', 'OTHER'))
+);
+CREATE INDEX ix_invoice_payments_invoice_id   ON invoice_payments (invoice_id);
+CREATE INDEX ix_invoice_payments_payment_date ON invoice_payments (payment_date);
+
+COMMENT ON TABLE  invoice_payments         IS 'Pagos aplicados a una factura. La suma no puede superar el total.';
+COMMENT ON COLUMN invoice_payments.user_id IS 'Usuario que registra el pago; se toma del JWT.';
+
+-- =====================================================================
+-- TRIGGERS DE AUDITORÍA (18 tablas)
+-- Excluidas a propósito: sale_lot_allocations, invoice_details e
+-- invoice_payments. Son registros de solo inserción y no tienen updated_at.
+-- =====================================================================
+CREATE TRIGGER trg_roles_audit                  BEFORE INSERT OR UPDATE ON roles                 FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_users_audit                  BEFORE INSERT OR UPDATE ON users                 FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_product_categories_audit     BEFORE INSERT OR UPDATE ON product_categories    FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_product_types_audit          BEFORE INSERT OR UPDATE ON product_types         FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_product_brands_audit         BEFORE INSERT OR UPDATE ON product_brands        FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_product_models_audit         BEFORE INSERT OR UPDATE ON product_models        FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_measure_units_audit          BEFORE INSERT OR UPDATE ON measure_units         FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_presentations_audit          BEFORE INSERT OR UPDATE ON presentations         FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_products_audit               BEFORE INSERT OR UPDATE ON products              FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_product_presentations_audit  BEFORE INSERT OR UPDATE ON product_presentations FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_product_prices_audit         BEFORE INSERT OR UPDATE ON product_prices        FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_suppliers_audit              BEFORE INSERT OR UPDATE ON suppliers             FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_product_lots_audit           BEFORE INSERT OR UPDATE ON product_lots          FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_customers_audit              BEFORE INSERT OR UPDATE ON customers             FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_document_sequences_audit     BEFORE INSERT OR UPDATE ON document_sequences    FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_sales_audit                  BEFORE INSERT OR UPDATE ON sales                 FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_sale_details_audit           BEFORE INSERT OR UPDATE ON sale_details          FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+CREATE TRIGGER trg_invoices_audit               BEFORE INSERT OR UPDATE ON invoices              FOR EACH ROW EXECUTE FUNCTION set_audit_timestamps();
+
+-- ---------------------------------------------------------------------
+-- Datos base mínimos: roles del sistema (no jerárquicos, D-07)
+-- ---------------------------------------------------------------------
+INSERT INTO roles (code, name, description) VALUES
+  ('ADMIN',      'Administrador', 'Gerencia y soporte IT: usuarios, catálogos, productos, precios, proveedores, lotes, clientes, ventas, facturación, dashboard y reportes.'),
+  ('WAREHOUSE',  'Bodega',        'Productos y presentaciones, ingreso y corrección de lotes, consulta de ventas, dashboard y consulta de productos.'),
+  ('PURCHASING', 'Compras',       'Proveedores, costos de lotes, productos en bajo stock, consulta de productos, lotes, ventas y facturas.'),
+  ('SELLER',     'Vendedor',      'Clientes, ventas propias, emisión de facturas y registro de pagos. No ve costos ni proveedores.')
+ON CONFLICT (code) DO NOTHING;
+
+-- ---------------------------------------------------------------------
+-- Secuencias iniciales del año en curso (V6).
+-- El servicio de numeración crea la fila del año nuevo si no existe.
+-- ---------------------------------------------------------------------
+INSERT INTO document_sequences (document_type, prefix, year, current_number)
+VALUES
+  ('SALE',        'V-',   EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER, 0),
+  ('INVOICE',     'F-',   EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER, 0),
+  ('CCF',         'CCF-', EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER, 0),
+  ('CREDIT_NOTE', 'NC-',  EXTRACT(YEAR FROM CURRENT_DATE)::INTEGER, 0)
+ON CONFLICT (document_type, year) DO NOTHING;

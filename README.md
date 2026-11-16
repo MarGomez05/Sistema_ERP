@@ -1,6 +1,6 @@
 # TAMACHIHUA-ERP
 
-Sistema de gestión para ferretería y agroservicio. Actualmente cubre el módulo de **inventario** y está en proceso de escalar a un **ERP comercial** con clientes, ventas, facturación y pagos.
+Sistema de gestión para ferretería y agroservicio. Cubre **inventario** y avanza hacia un **ERP comercial** con clientes, ventas, facturación y pagos.
 
 > **Alcance del cliente:** únicamente **Angular web**. No se usa Vue ni Ionic ni aplicación móvil.
 
@@ -8,8 +8,8 @@ Sistema de gestión para ferretería y agroservicio. Actualmente cubre el módul
 
 - **Flyway implementado**: migraciones `V1`–`V6` en `Api/api/src/main/resources/db/migration/`.
 - **CRUD de clientes implementado** en `/api/customers` con validaciones, saldo pendiente y seguridad por rol.
-- Se agregaron tablas y relaciones para clientes, ventas, detalle de venta, facturación, pagos y secuencias de documentos.
-- Se agregó `imageUrl`/`imageAlt` por presentación de producto y `taxRate` por producto en el esquema.
+- **Ventas implementadas** en `/api/sales`: creación y edición en `DRAFT`, confirmación con FEFO y bloqueo pesimista, cancelación con devolución de stock, numeración `V-AAAA-NNNNNN` y validación de crédito.
+- El esquema de facturación, pagos e imágenes ya está migrado; sus endpoints están pendientes.
 - Se retiran los endpoints `/api/app/**` y el encabezado `X-Client-Interface` en el código nuevo.
 - El frontend Angular se ubicará en `web/`.
 
@@ -26,7 +26,7 @@ Control_inventario/
 ├── Api/
 │   ├── README.md          # Documentación del backend
 │   └── api/               # Proyecto Spring Boot (pom.xml aquí)
-├── Base_datos/            # Esquema anterior (referencia para el baseline Flyway)
+├── Base_datos/            # Esquema consolidado de referencia, MER y diccionario
 ├── Documentacion/         # Contrato de API, diagramas y logo
 └── web/                   # Angular (futuro)
 ```
@@ -78,6 +78,7 @@ Documentación interactiva: `http://localhost:8080/swagger-ui/index.html`.
 - [`MEMORY.md`](MEMORY.md): estado, decisiones, convenciones y pendientes.
 - [`Api/README.md`](Api/README.md): configuración y guía del backend.
 - [`Documentacion/Diagramas/Endpoints-API.md`](Documentacion/Diagramas/Endpoints-API.md): contrato REST v2.0.
+- [`Base_datos/README.md`](Base_datos/README.md): esquema consolidado, MER y diccionario de datos.
 - [`AGENTS.md`](AGENTS.md): reglas para agentes y desarrolladores.
 
 ## Reglas generales

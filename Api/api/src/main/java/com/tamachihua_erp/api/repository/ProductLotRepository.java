@@ -3,12 +3,14 @@ package com.tamachihua_erp.api.repository;
 import com.tamachihua_erp.api.entity.ProductLot;
 import com.tamachihua_erp.api.repository.projection.ExpiringLotProjection;
 import com.tamachihua_erp.api.repository.projection.PresentationStockProjection;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -129,4 +131,27 @@ public interface ProductLotRepository
             ORDER BY l.expiration_date ASC
             """, nativeQuery = true)
     List<ExpiringLotProjection> findExpiringLots(@Param("limit") LocalDate limit);
+
+    // Lotes vendibles en orden FEFO, bloqueados al confirmar una venta (D-04, D-08).
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select l from ProductLot l
+            where l.productPresentation.id = :productPresentationId
+              and l.isActive = true
+              and l.availableQuantity > 0
+              and (l.expirationDate is null or l.expirationDate >= :today)
+            order by case when l.expirationDate is null then 1 else 0 end,
+                     l.expirationDate asc,
+                     l.entryDate asc,
+                     l.id asc
+            """)
+    List<ProductLot> findSellableLotsForUpdate(
+            @Param("productPresentationId") Long productPresentationId,
+            @Param("today") LocalDate today
+    );
+
+    // Bloquea un lote al devolver stock por cancelación de venta.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select l from ProductLot l where l.id = :id")
+    Optional<ProductLot> findByIdForUpdate(@Param("id") Long id);
 }

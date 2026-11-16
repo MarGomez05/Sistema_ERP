@@ -1,9 +1,9 @@
 # Implementación — Nueva etapa de TAMACHIHUA-ERP
 
 > Documento de planificación aprobado.
-> Fecha: 13/11/2026 · Rama: `feature/Documentacion` · Estado: en ejecución (Fases 2 y 3 completadas el 14/11/2026).
+> Fecha: 13/11/2026 · Rama: `feature/ventas-fefo` · Estado: en ejecución (Fases 2, 3 y 4 completadas el 14/11/2026).
 >
-> Esta etapa **no modifica código todavía**. Define cómo se trabajará: Flyway, nuevas tablas y relaciones, endpoints nuevos y modificados, flujo de clientes/ventas/facturación y frontend Angular web.
+> Esta etapa define cómo se trabaja: Flyway, nuevas tablas y relaciones, endpoints nuevos y modificados, flujo de clientes/ventas/facturación y frontend Angular web. Las fases 2, 3 y 4 ya están implementadas.
 
 ## 1. Resumen ejecutivo
 
@@ -30,8 +30,8 @@ Cambios de alcance aprobados:
 
 ### 2.2 Base de datos
 
-- `Base_datos/01_create_tables.sql` define 13 tablas.
-- `Base_datos/02_seed_data.sql` carga datos iniciales y de prueba.
+- `Base_datos/esquema_consolidado.sql` contiene el esquema completo de referencia (originalmente 13 tablas de inventario).
+- Los datos iniciales y de prueba no forman parte del esquema; el consolidado solo incluye roles y secuencias base.
 - `Base_datos/Diccionario_de_datos_TAMACHIHUA.xlsx` documenta tipos, restricciones, índices y triggers.
 - Tablas: `roles`, `users`, `product_categories`, `product_types`, `product_brands`, `product_models`, `measure_units`, `presentations`, `products`, `product_presentations`, `product_prices`, `suppliers`, `product_lots`.
 - La existencia no se almacena: se deriva de `SUM(available_quantity)` de lotes activos.
@@ -404,7 +404,7 @@ Visibilidad: `SELLER` solo ve sus propias ventas; `ADMIN` ve todas.
 - Agregar `flyway-core` y `flyway-database-postgresql`.
 - Crear `Api/api/src/main/resources/db/migration/`.
 - Mantener `spring.jpa.hibernate.ddl-auto=validate`.
-- `Base_datos/01_create_tables.sql` y `02_seed_data.sql` quedan como **referencia histórica**.
+- `Base_datos/esquema_consolidado.sql` queda como **referencia sincronizada** del esquema; no se ejecuta en una base administrada por Flyway.
 
 ### 8.2 Migraciones planificadas
 
@@ -558,7 +558,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 4. `README.md`: presentación y arranque del proyecto.
 5. `Api/README.md`: guía del backend, Flyway y endpoints.
 6. `Documentacion/Diagramas/Endpoints-API.md`: contrato REST v2.0.
-7. `Base_datos/`: referencia histórica del esquema anterior al baseline.
+7. `Base_datos/`: esquema consolidado de referencia, MER y diccionario de datos.
 
 ## 15. Estado de ejecución
 
@@ -568,7 +568,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 1 | Documentación base | Completada |
 | 2 | Flyway baseline y migraciones de clientes, ventas, facturación e imágenes | **Completada (14/11/2026)** |
 | 3 | CRUD de clientes con validaciones y seguridad | **Completada (14/11/2026)** |
-| 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | Pendiente |
+| 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | Pendiente |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | Pendiente (columnas ya migradas en V5) |
 | 7 | Frontend Angular | Pendiente |
@@ -591,3 +591,16 @@ Detalle de la Fase 3:
 - `outstandingBalance` calculado sobre facturas `ISSUED`; el listado usa una consulta agregada.
 - Matriz de seguridad aplicada en `SecurityConfig`.
 - Pruebas unitarias de servicio y validaciones, más validación E2E de endpoints y permisos.
+
+Detalle de la Fase 4:
+
+- Implementación por capas: `controller/SaleController`, `service/SaleService` + `service/impl/SaleServiceImpl`, `service/DocumentSequenceService` + `service/impl/DocumentSequenceServiceImpl`, `repository/SaleRepository`, `repository/DocumentSequenceRepository`, `entity/Sale`, `entity/SaleDetail`, `entity/SaleLotAllocation`, `entity/DocumentSequence`, `mapper/SaleMapper`, `util/SaleTotalsCalculator` y DTO en `dto/sale/`.
+- Endpoints: `GET /api/sales`, `GET /api/sales/{id}`, `POST /api/sales`, `PUT /api/sales/{id}`, `POST /api/sales/{id}/confirm` y `POST /api/sales/{id}/cancel`.
+- Creación y edición solo en `DRAFT`; el precio se toma del historial vigente cuando no se envía y el vendedor sale del JWT.
+- Totales con `BigDecimal` y `HALF_UP`; los precios incluyen IVA (D-02): `lineTotal = cantidad × precio − descuento` y `lineSubtotal = lineTotal / (1 + taxRate/100)`.
+- Confirmación con validación de crédito, exclusión de lotes vencidos, orden FEFO y bloqueo `PESSIMISTIC_WRITE`; responde `409 INSUFFICIENT_STOCK` si falta stock.
+- Cancelación solo para `ADMIN`, con devolución de stock a los lotes asignados; rechaza ventas con factura `ISSUED`.
+- Numeración `V-AAAA-NNNNNN` con `document_sequences` (`ON CONFLICT` + `SELECT ... FOR UPDATE`, D-13).
+- Visibilidad: `SELLER` solo ve y opera sus propias ventas; `ADMIN` todas; `WAREHOUSE` y `PURCHASING` consultan.
+- Pruebas unitarias de cálculo de IVA, validaciones del DTO y servicio; validación E2E contra PostgreSQL local con 53 comprobaciones.
+- `Base_datos/esquema_consolidado.sql` corregido y validado contra el esquema migrado (ver `Base_datos/README.md`).

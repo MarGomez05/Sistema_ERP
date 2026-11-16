@@ -81,7 +81,7 @@ Control_inventario/
 - Los DTO por dominio viven en subpaquetes de `dto/` (por ejemplo, `dto/customer`, `dto/sale`, `dto/billing`).
 - Paquetes objetivo: nuevas clases en las capas existentes; no crear paquetes raíz por funcionalidad.
 - No hay POM en la raíz. Todos los comandos Maven se ejecutan desde `Api/api`.
-- `Base_datos/01_create_tables.sql` y `02_seed_data.sql` son referencia histórica; la fuente oficial pasa a ser Flyway.
+- `Base_datos/esquema_consolidado.sql` es la referencia sincronizada del esquema completo; la fuente oficial sigue siendo Flyway.
 
 ## Flujo de trabajo
 

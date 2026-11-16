@@ -1,8 +1,8 @@
 # MEMORY.md — TAMACHIHUA-ERP
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
-> Última actualización: 14/11/2026.
-> Estado: Fases 2 y 3 completadas (Flyway V1–V6 y CRUD de clientes); API validada con `validate` y pruebas de endpoints.
+> Última actualización: 16/11/2026.
+> Estado: Fases 2, 3 y 4 completadas (Flyway V1–V6, CRUD de clientes y ventas con FEFO); API validada con `validate`, pruebas unitarias y E2E de endpoints.
 
 ## 1. Resumen
 
@@ -34,17 +34,18 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Documentación del backend en `Api/README.md`.
 - Plan aprobado en `Implementacion.md`.
 - Contrato REST v2.0 en `Documentacion/Diagramas/Endpoints-API.md`.
-- `Base_datos/01_create_tables.sql` y `02_seed_data.sql` quedaron como referencia histórica.
+- `Base_datos/esquema_consolidado.sql` es el script consolidado de referencia y `Base_datos/Script.pdf` el MER completo (2 páginas).
 - **Flyway implementado** en `Api/api/src/main/resources/db/migration/` con `V1`–`V6`.
 - 21 tablas de negocio: las 13 originales más `customers`, `document_sequences`, `sales`, `sale_details`, `sale_lot_allocations`, `invoices`, `invoice_details` e `invoice_payments`.
 - Migraciones aplicadas y verificadas en dos escenarios: esquema existente (baseline V1 + V2–V6) y esquema vacío (V1–V6).
 - `spring.jpa.hibernate.ddl-auto=validate` se mantiene; la API arranca correctamente en ambos escenarios.
-- API implementada: auth, usuarios, roles, catálogos, productos, presentaciones, precios, proveedores, lotes, dashboard, `/api/app/**` y **clientes** (`/api/customers`).
+- API implementada: auth, usuarios, roles, catálogos, productos, presentaciones, precios, proveedores, lotes, dashboard, `/api/app/**`, **clientes** (`/api/customers`) y **ventas** (`/api/sales`).
 - Clientes: listado paginado con filtros, opciones, detalle con saldo pendiente, creación, edición, estado y crédito; matriz de seguridad aplicada.
-- Aún no hay endpoints, entidades ni servicios de ventas, facturación, pagos e imágenes: solo el esquema.
-- Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes (servicio y validaciones) y validación E2E manual contra PostgreSQL local.
+- Ventas: creación/edición en `DRAFT`, confirmación con FEFO y bloqueo pesimista, cancelación con devolución de stock, numeración por secuencia y validación de crédito.
+- Aún no hay endpoints, entidades ni servicios de facturación, pagos e imágenes: solo el esquema.
+- Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes y ventas (servicio, validaciones y cálculo de IVA) y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- Rama de trabajo actual: `feature/customer-crud`. No se debe hacer commit sin autorización.
+- Rama de trabajo actual: `feature/ventas-fefo`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
 
@@ -71,6 +72,20 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Pruebas unitarias: `CustomerServiceImplTest` y `CustomerRequestDtoValidationTest` (Mockito + Jakarta Validation), en verde.
 - Validación E2E contra PostgreSQL local: 26 comprobaciones de CRUD, validaciones, saldo y matriz de permisos, todas en verde.
 
+### Avance 14/11/2026 — Fase 4 (Ventas)
+
+- Implementación por capas: `controller/SaleController`, `service/SaleService` + `service/impl/SaleServiceImpl`, `repository/SaleRepository`, `repository/DocumentSequenceRepository`, `entity/Sale`, `entity/SaleDetail`, `entity/SaleLotAllocation`, `entity/DocumentSequence`, `mapper/SaleMapper` y DTO en `dto/sale/`.
+- Endpoints implementados: `GET /api/sales`, `GET /api/sales/{id}`, `POST /api/sales`, `PUT /api/sales/{id}`, `POST /api/sales/{id}/confirm` y `POST /api/sales/{id}/cancel`.
+- Creación y edición solo en `DRAFT`; precio vigente tomado de `product_prices` cuando no se envía; `tax_rate` desde el producto.
+- Totales con `BigDecimal` y `HALF_UP`: los precios incluyen IVA (D-02), `lineTotal = cantidad × precio − descuento`, `lineSubtotal = lineTotal / (1 + tasa/100)`.
+- Confirmación: valida cliente activo y límite de crédito, excluye lotes vencidos, bloquea con `PESSIMISTIC_WRITE` y asigna en orden FEFO; devuelve 409 `INSUFFICIENT_STOCK` si falta stock.
+- Cancelación: solo ADMIN; devuelve stock a los lotes de `sale_lot_allocations`; rechaza ventas con factura `ISSUED`.
+- Numeración `V-AAAA-NNNNNN` con `document_sequences`, `ON CONFLICT` + `SELECT ... FOR UPDATE`.
+- `SELLER` solo ve y opera sus propias ventas; `ADMIN` ve todas; `WAREHOUSE` y `PURCHASING` consultan.
+- Pruebas unitarias: `SaleTotalsCalculatorTest`, `SaleRequestDtoValidationTest` y `SaleServiceImplTest`, en verde.
+- Validación E2E contra PostgreSQL local: 53 comprobaciones de totales, FEFO, stock, cancelación, crédito, numeración, visibilidad y permisos, todas en verde.
+- `Base_datos/esquema_consolidado.sql` corregido (D-14): se agregaron `products.tax_rate`, `ck_products_tax_rate`, `ix_invoices_sale_id`, `ix_sale_details_sale_id`, `ix_sale_lot_allocations_sale_detail_id` y las secuencias iniciales; se validó contra la base migrada comparando columnas, restricciones e índices.
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -79,8 +94,8 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - `README.md` raíz actualizado.
 - `Api/README.md` reescrito sin Vue/Ionic, con Flyway y flujo Angular.
 - `Documentacion/Diagramas/Endpoints-API.md` en v2.0 con clientes, ventas, facturación y pagos.
-- `Base_datos/README.md` que marca la carpeta como referencia histórica.
-- Encabezado de `Base_datos/01_create_tables.sql` actualizado para indicar que Flyway es la fuente oficial.
+- `Base_datos/README.md` describe el esquema consolidado, el MER y el diccionario de datos.
+- `Base_datos/esquema_consolidado.sql` validado contra la base migrada por Flyway: mismas tablas, columnas, restricciones e índices.
 
 ## 4. Decisiones aprobadas
 
@@ -97,6 +112,9 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-09 | Spring Boot 4 requiere `spring-boot-starter-flyway`; `flyway-core` por sí solo no activa la auto-configuración | Aplicada |
 | D-10 | El saldo pendiente del cliente se calcula con consulta agregada sobre `invoices`; no se expone la entidad de factura en el módulo de clientes | Aplicada |
 | D-11 | Mantener la arquitectura por capas (`controller`, `service`, `repository`, `entity`, `mapper`, `dto`); los DTO por dominio usan subpaquetes (`dto/customer`) y no se crean paquetes raíz por funcionalidad | Aplicada |
+| D-12 | Los totales de venta se derivan de precios con IVA incluido; `discount` es un importe y la base se obtiene con `lineTotal / (1 + taxRate/100)` | Aplicada |
+| D-13 | La numeración de ventas usa `document_sequences` con `INSERT ... ON CONFLICT` y `SELECT ... FOR UPDATE` para serializar concurrencia | Aplicada |
+| D-14 | Flyway `V1`–`V6` sigue siendo la fuente oficial del esquema; `Base_datos/esquema_consolidado.sql` es una referencia sincronizada, no una migración | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -109,7 +127,11 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - `SELLER` no ve costos; `WAREHOUSE` no ve costos ni proveedores; `PURCHASING` ve costos.
 - `userId` siempre se toma del JWT, nunca del body.
 - Mensajes de usuario, validaciones, comentarios y documentación en español; identificadores de código en inglés.
-- Venta: `DRAFT → CONFIRMED → CANCELLED`. Una venta facturada no se cancela directamente: se emite nota de crédito.
+- Venta: `DRAFT → CONFIRMED → CANCELLED`. Solo se edita en `DRAFT`.
+- Confirmar venta valida stock vendible, cliente activo y crédito, y asigna lotes FEFO con bloqueo pesimista.
+- Cancelar venta devuelve stock; si hay factura emitida, exige nota de crédito.
+- La numeración de ventas es `V-AAAA-NNNNNN` y sale de `document_sequences`.
+- `discount` en la línea es un importe y no puede superar `cantidad × unitPrice`.
 - Factura emitida: inmutable; snapshot de cliente y líneas.
 - Pago: no puede superar el saldo de la factura.
 - Crédito: se valida `saldo pendiente + total` contra `credit_limit`.
@@ -188,14 +210,14 @@ Control_inventario/
 ├── Api/
 │   ├── README.md
 │   └── api/                 # Backend Spring Boot
-├── Base_datos/              # Esquema histórico + README de referencia
+├── Base_datos/              # Esquema consolidado de referencia + MER + diccionario
 ├── Documentacion/           # Contrato, diagramas y logo
 └── web/                     # Angular (futuro)
 ```
 
 Backend actual: `Api/api/src/main/java/com/tamachihua_erp/api/`.
 Módulos actuales: `config`, `security`, `controller`, `service`, `repository`, `entity`, `mapper`, `dto`, `exception`, `util`.
-Subpaquetes de DTO por dominio: `dto/app`, `dto/auth`, `dto/customer`, `dto/product`, etc.
+Subpaquetes de DTO por dominio: `dto/app`, `dto/auth`, `dto/customer`, `dto/sale`, `dto/product`, etc.
 No existen paquetes raíz por funcionalidad.
 
 ## 10. Comandos
@@ -219,16 +241,15 @@ Variables requeridas: `DB_URL`, `DB_USERNAME`, `DB_PASSWORD`, `JWT_SECRET` (Base
 - `Implementacion.md`: plan detallado de la nueva etapa.
 - `Api/README.md`: guía del backend, configuración, Flyway y endpoints.
 - `Documentacion/Diagramas/Endpoints-API.md`: contrato REST v2.0.
-- `Base_datos/`: esquema y datos históricos; `README.md` explica su uso como referencia del baseline.
+- `Base_datos/`: esquema consolidado de referencia, MER y diccionario; `README.md` explica su relación con Flyway.
 - `AGENTS.md`: reglas para agentes.
 
 ## 12. Pendientes técnicos
 
-- Implementar ventas, facturación, pagos e imágenes (entidades, DTOs, servicios y endpoints).
+- Implementar facturación, pagos e imágenes (entidades, DTOs, servicios y endpoints).
 - Retirar `/api/app/**` y `X-Client-Interface`.
-- Actualizar `SecurityConfig` con la matriz de ventas y facturación.
-- Mapear `image_url`/`image_alt` y `tax_rate` en las entidades cuando se implementen sus módulos.
-- Implementar FEFO con bloqueo pesimista y stock vendible.
+- Actualizar `SecurityConfig` con la matriz de facturación.
+- Mapear `image_url`/`image_alt` en las entidades y DTOs de presentación.
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Configurar CI/CD.
 - Crear frontend Angular en `web/`.
