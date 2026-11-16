@@ -1,0 +1,28 @@
+import { RoleCode } from '@core/auth/auth.model';
+import { IconName } from '@shared/ui/icon/icon.component';
+
+export interface NavItem {
+  label: string;
+  icon: IconName;
+  route: string;
+  roles?: readonly RoleCode[];
+}
+
+export interface NavSection {
+  label: string;
+  items: readonly NavItem[];
+}
+
+// Se amplía un módulo por entregable; no se muestran secciones sin funcionalidad.
+export const NAV_SECTIONS: readonly NavSection[] = [
+  {
+    label: 'General',
+    items: [
+      {
+        label: 'Panel general',
+        icon: 'dashboard',
+        route: '/dashboard',
+      },
+    ],
+  },
+];
