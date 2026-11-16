@@ -260,6 +260,25 @@ public class SecurityConfig {
                                 "/api/sales/**"
                         ).hasAnyRole("ADMIN", "SELLER")
 
+                        // Facturas: nota de crédito solo ADMIN (contrato §12)
+                        .requestMatchers(
+                                HttpMethod.POST,
+                                "/api/invoices/*/credit-note"
+                        ).hasRole("ADMIN")
+
+                        // Facturas y pagos: consulta ADMIN, PURCHASING y SELLER
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/invoices",
+                                "/api/invoices/**"
+                        ).hasAnyRole("ADMIN", "PURCHASING", "SELLER")
+
+                        // Facturas y pagos: emitir y registrar ADMIN y SELLER
+                        .requestMatchers(
+                                "/api/invoices",
+                                "/api/invoices/**"
+                        ).hasAnyRole("ADMIN", "SELLER")
+
                         // Lotes: consulta para ADMIN, WAREHOUSE y PURCHASING
                         .requestMatchers(
                                 HttpMethod.GET,

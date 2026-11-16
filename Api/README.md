@@ -233,22 +233,26 @@ Clientes: `GET` incluye `outstandingBalance` (facturas `ISSUED`, `total - paid_t
 
 Ventas: `GET` con filtros `from`, `to`, `customerId`, `status` y `userId`; `POST` y `PUT` solo en `DRAFT`; `confirm` consume stock vendible en orden FEFO con bloqueo pesimista; `cancel` devuelve stock y exige que no exista factura emitida. El `saleNumber` se genera con `document_sequences` (`V-AAAA-NNNNNN`).
 
-### 7.2 Nuevos (facturación)
+### 7.2 Facturación
 
 | Grupo | Base |
 |---|---|
 | Facturación | `/api/invoices` |
 | Pagos | `/api/invoices/{id}/payments` |
 
-Endpoints destacados:
+Endpoints:
 
 ```text
-POST /api/sales/{id}/invoice        Emitir factura
-POST /api/invoices/{id}/payments    Registrar pago
-POST /api/invoices/{id}/credit-note Emitir nota de crédito
+GET  /api/invoices
+GET  /api/invoices/{id}
+POST /api/invoices
+POST /api/sales/{id}/invoice
+POST /api/invoices/{id}/payments
+GET  /api/invoices/{id}/payments
+POST /api/invoices/{id}/credit-note
 ```
 
-El contrato completo está en `Documentacion/Diagramas/Endpoints-API.md` (v2.0).
+Facturación: la factura se emite solo desde una venta `CONFIRMED` y sin factura previa. Guarda snapshot del cliente y de las líneas, usa `document_sequences` (`F-AAAA-NNNNNN` o `CCF-AAAA-NNNNNN`) y calcula `dueDate` en crédito. Los pagos actualizan `paidTotal` y no pueden superar el total. La nota de crédito solo la emite `ADMIN`; referencia la factura original, la cancela junto con la venta y devuelve stock solo si `returnStock = true`.
 
 ### 7.3 Retirados
 
