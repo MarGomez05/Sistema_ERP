@@ -2,7 +2,7 @@
 
 Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre, en esta primera entrega, la **base del frontend**: autenticación real, layout, navegación por rol y panel general con datos del backend.
 
-> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026): login editorial asimétrico y gráficas SVG/CSS propias en el panel general. Los módulos de catálogos, clientes, ventas y facturación se incorporan en entregables posteriores.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 en progreso** (17/11/2026) con el módulo de **catálogos de inventario**. Los productos, presentaciones, precios, clientes, ventas y facturación se incorporan en los siguientes entregables.
 
 ---
 
@@ -128,6 +128,15 @@ Estados cubiertos: carga con skeletons, error con reintento por sección, listas
 
 Ruta comodín con identidad de marca y accesos al panel o al login según el estado de sesión.
 
+### Catálogos de inventario (7.2 en progreso)
+
+- Página única `/catalogs` con pestañas accesibles para categorías, tipos de producto, marcas, modelos, unidades de medida y presentaciones.
+- Listado paginado con búsqueda, filtro por estado y filtro por marca o unidad de medida según el catálogo.
+- Formulario lateral reutilizable con validaciones espejo del backend; los modelos y presentaciones cargan sus combos desde `/options`.
+- Baja lógica con `PATCH /{id}/status`, confirmación en línea y mensaje del backend cuando el catálogo tiene hijos activos.
+- Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN`.
+- Configuración declarativa en `catalog.model.ts` (`CATALOGS`, `toPayload`, `columnValue`) para no duplicar los seis listados.
+
 ---
 
 ## 4. Identidad visual
@@ -170,7 +179,7 @@ Web/
 │   ├── app/
 │   │   ├── core/
 │   │   │   ├── auth/          # modelo, servicio, guards e interceptor
-│   │   │   ├── http/          # interceptor de errores
+│   │   │   ├── http/          # interceptores y lectura de errores de la API
 │   │   │   ├── models/        # ApiErrorResponse, PageResponse
 │   │   │   └── ui/            # ToastService
 │   │   ├── layout/
@@ -183,6 +192,7 @@ Web/
 │   │   │                      # y charts/ (donut, column, bar)
 │   │   ├── features/
 │   │   │   ├── auth/login/
+│   │   │   ├── catalogs/      # configuración, servicio, pestañas, listado y formulario
 │   │   │   ├── dashboard/
 │   │   │   └── errors/
 │   │   ├── app.config.ts
@@ -208,6 +218,7 @@ Alias de importación disponibles: `@core/*`, `@shared/*`, `@layout/*`, `@featur
 |---|---|---|
 | `/login` | Solo invitados | Inicio de sesión |
 | `/dashboard` | Autenticados | Panel adaptado por rol |
+| `/catalogs` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Catálogos de inventario |
 | `/` | Autenticados | Redirige a `/dashboard` |
 | `**` | Público | Página no encontrada |
 
@@ -254,6 +265,7 @@ La suite incluye:
 
 - `auth.service.spec.ts`: mapeo de errores de login (401, 403, fallo de conexión, mensaje del backend y error genérico) y comportamiento del servicio de autenticación.
 - `dashboard.charts.spec.ts`: reparto de la dona de lotes, rangos de vencimiento, cálculo del faltante y casos límite con datos inconsistentes o vacíos.
+- `catalog.model.spec.ts`: configuración de los seis catálogos, filtros por relación, payloads de creación/edición y formato de columnas.
 
 El build de producción también valida plantillas estrictas y presupuestos de tamaño.
 
@@ -270,7 +282,7 @@ Salida: `dist/tamachihua-web/browser`.
 | Entregable | Alcance |
 |---|---|
 | **7.1 Base del frontend** | Proyecto, diseño, login, shell, guards, dashboard, 404 y documentación — **completado**; rediseño visual 7.1.1 con login asimétrico y gráficas propias — **completado** |
-| 7.2 Catálogos e inventario | Catálogos, productos, presentaciones, precios y lotes |
+| 7.2 Catálogos e inventario | Catálogos — **completado**; productos, presentaciones, precios y lotes — pendientes |
 | 7.3 Clientes | Listado, filtros, detalle, creación, edición, estado y crédito |
 | 7.4 Ventas | Listado, nueva venta, detalle, confirmación y cancelación |
 | 7.5 Facturación | Emisión, detalle, pagos y notas de crédito |
@@ -282,7 +294,7 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
 ## 11. Limitaciones conocidas
 
-- Solo el panel general está implementado; los demás módulos se agregan por entregable.
+- Solo el panel general y los catálogos están implementados; los demás módulos se agregan por entregable.
 - No hay entorno de producción ni pipeline de despliegue del frontend todavía.
 - En producción se requiere un proxy inverso que enrute `/api` al backend y sirva el `index.html` para las rutas del router.
 - No hay pruebas E2E de navegador; la verificación actual es build, pruebas unitarias y arranque con proxy.

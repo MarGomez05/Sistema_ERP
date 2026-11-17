@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 
 import { authGuard } from '@core/auth/auth.guard';
 import { guestGuard } from '@core/auth/auth.guard';
+import { roleGuard } from '@core/auth/role.guard';
 import { ShellComponent } from '@layout/shell/shell.component';
 
 export const routes: Routes = [
@@ -27,6 +28,13 @@ export const routes: Routes = [
         title: 'Panel general',
         loadChildren: () =>
           import('@features/dashboard/dashboard.routes').then((module) => module.DASHBOARD_ROUTES),
+      },
+      {
+        path: 'catalogs',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'WAREHOUSE', 'PURCHASING'] },
+        loadChildren: () =>
+          import('@features/catalogs/catalogs.routes').then((module) => module.CATALOGS_ROUTES),
       },
     ],
   },

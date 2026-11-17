@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 17/11/2026.
-> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL) y **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404), con el rediseño visual **7.1.1** (login asimétrico y gráficas SVG/CSS propias). API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 16 pruebas en verde.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1** y **7.2 en progreso** con el módulo de **catálogos** (categorías, tipos, marcas, modelos, unidades y presentaciones). API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 26 pruebas en verde.
 
 ## 1. Resumen
 
@@ -47,7 +47,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Aún no hay subida de archivos ni almacenamiento local/S3 (D-06).
 - Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes, ventas, facturación e imágenes, y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard con gráficas SVG/CSS propias y página 404; documentado en `Web/README.md`.
+- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard con gráficas SVG/CSS propias, página 404 y **catálogos de inventario**; documentado en `Web/README.md`.
 - Rama de trabajo actual: `feature/web-base`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
@@ -141,6 +141,19 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Verificación: `npm run build` en verde (inicial 307.04 kB) y `npm test -- --watch=false` con 16 pruebas en verde (auth y cálculos de gráficas).
 - Documentación actualizada: `Web/README.md`, `Implementacion.md` y `MEMORY.md`.
 
+### Avance 17/11/2026 — Fase 7.2 (Catálogos de inventario)
+
+- Módulo `Web/src/app/features/catalogs/` con una sola página de pestañas accesibles (`role="tablist"`, flechas, Home/End) para los seis catálogos: categorías, tipos de producto, marcas, modelos, unidades de medida y presentaciones.
+- Configuración declarativa en `catalog.model.ts` (`CATALOGS`, `toPayload`, `columnValue`) que dirige columnas, filtros, campos y payloads; evita duplicar seis listados y seis formularios.
+- `CatalogService` tipado sobre `/api/{categories|product-types|brands|models|measure-units|presentations}`: listado paginado con `search`, `isActive`, `brandId`/`measureUnitId`, opciones activas para combos, creación, edición y cambio de estado con `PATCH /{id}/status`.
+- Formulario lateral reutilizable con Reactive Forms, validaciones espejo del backend, mensajes en español y selectores de marca/unidad cargados desde `/options`.
+- Listados con búsqueda, filtro por estado, filtro por relación, paginación, skeletons, estado vacío y error con reintento. La baja lógica se confirma en línea antes de desactivar.
+- Permisos: lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN`, coherente con `SecurityConfig`. Ruta `/catalogs` protegida por `roleGuard` y nueva sección «Inventario» en la navegación.
+- `core/http/api-error.ts` (`readApiError`) muestra los mensajes 400/409 del backend en el formulario y en conflictos de desactivación (por ejemplo, catálogo con hijos activos).
+- Iconos SVG propios añadidos: `plus`, `edit`, `power`, `tag`, `layers` y `ruler`.
+- Verificación: `npm run build` en verde (inicial 308.88 kB) y `npm test -- --watch=false` con 26 pruebas en verde, incluidas las de configuración y payloads de catálogos.
+- Pendiente del entregable 7.2: productos, presentaciones de producto, precios y lotes.
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -175,6 +188,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-17 | La imagen de una presentación se asigna con un endpoint JSON que guarda la URL o ruta relativa; la subida `multipart` con almacenamiento local/S3 queda para una fase posterior | Aplicada |
 | D-18 | El frontend usa un sistema de diseño propio con SCSS y tokens (sin Angular Material ni Tailwind), iconos SVG propios y consumo de la API por ruta relativa `/api` con proxy de desarrollo hacia `localhost:8080` | Aplicada |
 | D-19 | Las gráficas del dashboard son componentes SVG/CSS propios (`donut`, `column`, `bar`), sin librerías de visualización, y solo representan datos reales de `summary`, `low-stock` y `expiring-lots` | Aplicada |
+| D-20 | Los seis catálogos de inventario comparten una sola página con pestañas accesibles, listado y formulario dirigidos por configuración (`CATALOGS`); la lectura es `ADMIN`/`WAREHOUSE`/`PURCHASING` y la escritura solo `ADMIN` | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -326,7 +340,7 @@ npm test -- --watch=false
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Ejecutar la suite con Testcontainers cuando haya Docker disponible.
 - Configurar CI/CD.
-- Frontend: implementar los entregables 7.2 a 7.6 (catálogos, clientes, ventas, facturación y reportes) sobre la base ya creada en `Web/`.
+- Frontend: completar el entregable 7.2 (productos, presentaciones de producto, precios y lotes) y luego los entregables 7.3 a 7.6 (clientes, ventas, facturación y reportes) sobre la base ya creada en `Web/`.
 - Frontend: validar visualmente el rediseño 7.1.1 en navegador con backend y credenciales reales; en el entorno de trabajo no estaban disponibles.
 - Frontend: definir estrategia de despliegue con proxy inverso para `/api`.
 - Regenerar diagramas de arquitectura y clases.

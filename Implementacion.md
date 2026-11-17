@@ -446,6 +446,7 @@ Web/
 │   ├── layout/          # shell, sidebar, header y navegación
 │   └── features/
 │       ├── auth/        # login
+│       ├── catalogs/    # catálogos de inventario
 │       ├── dashboard/   # panel general por rol
 │       └── errors/      # 404
 ├── src/styles/          # tokens, base, componentes y utilidades SCSS
@@ -497,6 +498,20 @@ Implementado el 17/11/2026:
 - Cálculos puros en `features/dashboard/dashboard.charts.ts`, con pruebas Vitest para la dona, los rangos, el faltante y los casos límite.
 - Sin dependencias nuevas (ni Chart.js/ApexCharts) y sin cambios en backend, contratos ni reglas de negocio.
 - Verificación: `npm run build` en verde (inicial ~307 kB) y `npm test -- --watch=false` con 16 pruebas en verde.
+
+### 9.6 Entregable 7.2 — Catálogos de inventario
+
+Implementado el 17/11/2026 (primera parte del entregable 7.2):
+
+- Página única `/catalogs` con pestañas accesibles para categorías, tipos de producto, marcas, modelos, unidades de medida y presentaciones.
+- Configuración declarativa en `features/catalogs/catalog.model.ts` (`CATALOGS`, `toPayload` y `columnValue`) que dirige columnas, filtros, formulario y payload de cada recurso.
+- `CatalogService` sobre `/api/{recurso}`: listado paginado con `search`, `isActive` y filtro `brandId`/`measureUnitId`, `/options` para combos, creación, edición y `PATCH /{id}/status`.
+- Formulario lateral reutilizable con Reactive Forms, validaciones espejo del backend, mensajes en español y combos de marca/unidad cargados desde `/options`.
+- Listados con búsqueda, filtros, paginación, skeletons, estado vacío y error con reintento; la desactivación se confirma en línea y los conflictos 409 se muestran con el mensaje del backend.
+- Seguridad coherente con `SecurityConfig`: lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN`; ruta protegida con `roleGuard` y sección «Inventario» en la navegación.
+- Nuevo helper `core/http/api-error.ts` y iconos SVG propios (`plus`, `edit`, `power`, `tag`, `layers`, `ruler`).
+- Verificación: `npm run build` en verde (inicial 308.88 kB) y `npm test -- --watch=false` con 26 pruebas en verde.
+- Pendiente del entregable 7.2: productos, presentaciones de producto, precios y lotes.
 
 ## 10. Testing y CI/CD
 
@@ -598,7 +613,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | **En progreso**: 7.1 base completada (16/11/2026); 7.2–7.6 pendientes |
+| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos completado (17/11/2026); productos, precios y lotes de 7.2 y los entregables 7.3–7.6 pendientes |
 | 8 | Reportes | Pendiente |
 | 9 | Endurecimiento | Pendiente |
 
