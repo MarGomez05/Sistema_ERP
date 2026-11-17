@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 17/11/2026.
-> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1** y **7.2 en progreso** con el módulo de **catálogos** (categorías, tipos, marcas, modelos, unidades y presentaciones). API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 26 pruebas en verde.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1** y **7.2 en progreso** con los módulos de **catálogos** (categorías, tipos, marcas, modelos, unidades y presentaciones) y de **productos con sus presentaciones**. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 40 pruebas en verde.
 
 ## 1. Resumen
 
@@ -47,7 +47,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Aún no hay subida de archivos ni almacenamiento local/S3 (D-06).
 - Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes, ventas, facturación e imágenes, y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard con gráficas SVG/CSS propias, página 404 y **catálogos de inventario**; documentado en `Web/README.md`.
+- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard con gráficas SVG/CSS propias, página 404, **catálogos de inventario** y **productos con presentaciones**; documentado en `Web/README.md`.
 - Rama de trabajo actual: `feature/web-base`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
@@ -154,6 +154,19 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Verificación: `npm run build` en verde (inicial 308.88 kB) y `npm test -- --watch=false` con 26 pruebas en verde, incluidas las de configuración y payloads de catálogos.
 - Pendiente del entregable 7.2: productos, presentaciones de producto, precios y lotes.
 
+### Avance 17/11/2026 — Fase 7.2 (Productos y presentaciones)
+
+- Módulo `Web/src/app/features/products/` con listado `/products` y detalle `/products/:id`; ambos bajo `roleGuard` con lectura `ADMIN`/`WAREHOUSE`/`PURCHASING` y escritura `ADMIN`/`WAREHOUSE`.
+- `ProductService` consume `/api/products` (listado con `search`, `categoryId`, `productTypeId`, `isActive` y paginación; detalle, alta, edición y `PATCH /{id}/status`), las presentaciones por producto (`GET`/`POST`, `PUT /{presentationId}`, `PATCH /{presentationId}/status`) y las opciones de `/categories`, `/product-types`, `/models` y `/presentations`.
+- Listado con filtros, chips de existencias por presentación con color según `stockStatus` (`OUT`, `LOW`, `OK`), paginación, skeletons, vacío y error con reintento. No se suman unidades de presentaciones distintas.
+- Alta/edición de producto en panel lateral; `ProductRequestDto` no incluye `taxRate`, por lo que el formulario no lo envía ni lo inventa.
+- El detalle agrupa información general y tarjetas de presentación con espacio 16:9 reservado para la imagen: se muestra si `imageUrl` existe y, si no o si falla la carga, un marcador «Imagen pendiente · Espacio reservado».
+- El formulario de presentación edita código, stock mínimo, `imageUrl` e `imageAlt` con vista previa y validación (`http(s)://` o ruta relativa con `/`, máx. 500/150). Como `ProductPresentationUpdateRequestDto` borra la imagen si no se envía, el formulario siempre reenvía la URL vigente.
+- Precio vigente y existencias se muestran en modo lectura; el cambio de precio y los lotes quedan para la siguiente parte del entregable.
+- Iconos SVG añadidos: `image` y `arrowLeft`.
+- Verificación: `npm run build` en verde (inicial 309.80 kB) y `npm test -- --watch=false` con 40 pruebas en verde, incluidas `product.model.spec.ts`.
+- Pendiente del entregable 7.2: cambio de precio, historial y lotes.
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -189,6 +202,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-18 | El frontend usa un sistema de diseño propio con SCSS y tokens (sin Angular Material ni Tailwind), iconos SVG propios y consumo de la API por ruta relativa `/api` con proxy de desarrollo hacia `localhost:8080` | Aplicada |
 | D-19 | Las gráficas del dashboard son componentes SVG/CSS propios (`donut`, `column`, `bar`), sin librerías de visualización, y solo representan datos reales de `summary`, `low-stock` y `expiring-lots` | Aplicada |
 | D-20 | Los seis catálogos de inventario comparten una sola página con pestañas accesibles, listado y formulario dirigidos por configuración (`CATALOGS`); la lectura es `ADMIN`/`WAREHOUSE`/`PURCHASING` y la escritura solo `ADMIN` | Aplicada |
+| D-21 | Productos y sus presentaciones se gestionan en `/products` (listado) y `/products/:id` (detalle, presentaciones e imágenes por URL); la lectura es `ADMIN`/`WAREHOUSE`/`PURCHASING` y la escritura `ADMIN`/`WAREHOUSE`; el cambio de precio se reserva a `ADMIN` y queda para el siguiente entregable | Aplicada |
 
 ## 5. Reglas de negocio clave
 

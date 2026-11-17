@@ -447,6 +447,7 @@ Web/
 │   └── features/
 │       ├── auth/        # login
 │       ├── catalogs/    # catálogos de inventario
+│       ├── products/    # listado, detalle, presentaciones y formularios
 │       ├── dashboard/   # panel general por rol
 │       └── errors/      # 404
 ├── src/styles/          # tokens, base, componentes y utilidades SCSS
@@ -512,6 +513,22 @@ Implementado el 17/11/2026 (primera parte del entregable 7.2):
 - Nuevo helper `core/http/api-error.ts` y iconos SVG propios (`plus`, `edit`, `power`, `tag`, `layers`, `ruler`).
 - Verificación: `npm run build` en verde (inicial 308.88 kB) y `npm test -- --watch=false` con 26 pruebas en verde.
 - Pendiente del entregable 7.2: productos, presentaciones de producto, precios y lotes.
+
+### 9.7 Entregable 7.2 — Productos y presentaciones
+
+Implementado el 17/11/2026 (segunda parte del entregable 7.2):
+
+- Listado `/products` con búsqueda por nombre o código, filtros por categoría, tipo y estado, paginación y existencias por presentación en chips con color según `stockStatus`; no se suman unidades de presentaciones distintas.
+- Alta y edición de producto en panel lateral (`code`, `name`, `description`, `categoryId`, `productTypeId`, `productModelId` y `requiresExpiration`); el contrato no incluye `taxRate`, así que el cliente no lo envía.
+- Detalle `/products/:id` con información general y tarjetas de presentación que reservan un espacio 16:9 para la imagen: se muestra si `imageUrl` existe y, si no o si falla, un marcador «Imagen pendiente · Espacio reservado».
+- Gestión de presentaciones por producto: `GET`/`POST /api/products/{id}/presentations`, `PUT .../{presentationId}` y `PATCH .../{presentationId}/status`, con confirmación en línea al desactivar.
+- El formulario de presentación valida `http(s)://` o ruta relativa iniciada en `/` (máx. 500 caracteres) y `imageAlt` (máx. 150). Como el `PUT` del backend borra la imagen si no se envía, el formulario siempre reenvía la URL vigente.
+- Precio vigente y existencias en modo lectura; el cambio de precio y los lotes quedan pendientes de la siguiente parte.
+- Permisos: lectura `ADMIN`/`WAREHOUSE`/`PURCHASING` y escritura `ADMIN`/`WAREHOUSE`, coherentes con `SecurityConfig`; opción «Productos» en la sección «Inventario».
+- `ProductService` obtiene las opciones de los combos desde `/api/{categories|product-types|models|presentations}/options`.
+- Iconos SVG añadidos: `image` y `arrowLeft`. Pruebas nuevas en `features/products/product.model.spec.ts`.
+- Verificación: `npm run build` en verde (inicial 309.80 kB) y `npm test -- --watch=false` con 40 pruebas en verde.
+- Pendiente del entregable 7.2: cambio de precio, historial de precios y lotes.
 
 ## 10. Testing y CI/CD
 
@@ -613,7 +630,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos completado (17/11/2026); productos, precios y lotes de 7.2 y los entregables 7.3–7.6 pendientes |
+| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos y productos con presentaciones completados (17/11/2026); precios y lotes de 7.2 y los entregables 7.3–7.6 pendientes |
 | 8 | Reportes | Pendiente |
 | 9 | Endurecimiento | Pendiente |
 

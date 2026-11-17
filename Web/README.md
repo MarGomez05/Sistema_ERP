@@ -2,7 +2,7 @@
 
 Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre, en esta primera entrega, la **base del frontend**: autenticación real, layout, navegación por rol y panel general con datos del backend.
 
-> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 en progreso** (17/11/2026) con el módulo de **catálogos de inventario**. Los productos, presentaciones, precios, clientes, ventas y facturación se incorporan en los siguientes entregables.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 en progreso** (17/11/2026) con los módulos de **catálogos de inventario** y de **productos y presentaciones**. Precios, lotes, clientes, ventas y facturación se incorporan en los siguientes entregables.
 
 ---
 
@@ -137,6 +137,19 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN`.
 - Configuración declarativa en `catalog.model.ts` (`CATALOGS`, `toPayload`, `columnValue`) para no duplicar los seis listados.
 
+### Productos y presentaciones (7.2 en progreso)
+
+- Listado `/products` con búsqueda por nombre o código, filtros por categoría, tipo y estado, paginación y existencias por presentación en chips con color según `stockStatus`.
+- Alta y edición de producto en panel lateral: código, nombre, descripción, categoría, tipo, modelo opcional y bandera de vencimiento. El formulario conserva las opciones actuales aunque estén inactivas para no perder la referencia al editar.
+- Al crear un producto se navega a su detalle `/products/:id`, donde se concentran la información general y las presentaciones.
+- Detalle con tarjetas de presentación que reservan un espacio 16:9 para la imagen: si `imageUrl` existe se muestra, y si no aparece un marcador «Imagen pendiente · Espacio reservado». Una URL que falla cae al mismo marcador.
+- Cada tarjeta muestra existencia, stock mínimo, precio vigente, estado de stock y estado lógico; permite agregar, editar y activar/desactivar presentaciones con confirmación en línea.
+- El formulario de presentación edita código, stock mínimo, URL de imagen y texto alternativo, con vista previa y validación de `http(s)://` o ruta relativa iniciada en `/`. Como el `PUT` del backend reemplaza la imagen, el formulario siempre reenvía la URL vigente para no borrarla.
+- La subida de archivos no está implementada: la imagen se referencia por URL, tal como exige el contrato.
+- Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN` y `WAREHOUSE`. Los precios se muestran como lectura y su edición queda para el siguiente entregable de 7.2.
+- El listado no suma existencias entre presentaciones distintas: cada chip corresponde a una presentación con su propia unidad.
+- Si el backend rechaza una operación (código duplicado, presentación repetida, vencimiento con lotes activos, activación con catálogos inactivos), el mensaje del `400`/`409` se muestra en el formulario o en el toast.
+
 ---
 
 ## 4. Identidad visual
@@ -193,6 +206,7 @@ Web/
 │   │   ├── features/
 │   │   │   ├── auth/login/
 │   │   │   ├── catalogs/      # configuración, servicio, pestañas, listado y formulario
+│   │   │   ├── products/      # modelo, servicio, listado, detalle y formularios
 │   │   │   ├── dashboard/
 │   │   │   └── errors/
 │   │   ├── app.config.ts
@@ -219,6 +233,8 @@ Alias de importación disponibles: `@core/*`, `@shared/*`, `@layout/*`, `@featur
 | `/login` | Solo invitados | Inicio de sesión |
 | `/dashboard` | Autenticados | Panel adaptado por rol |
 | `/catalogs` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Catálogos de inventario |
+| `/products` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Listado de productos |
+| `/products/:id` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Detalle y presentaciones del producto |
 | `/` | Autenticados | Redirige a `/dashboard` |
 | `**` | Público | Página no encontrada |
 
@@ -266,6 +282,7 @@ La suite incluye:
 - `auth.service.spec.ts`: mapeo de errores de login (401, 403, fallo de conexión, mensaje del backend y error genérico) y comportamiento del servicio de autenticación.
 - `dashboard.charts.spec.ts`: reparto de la dona de lotes, rangos de vencimiento, cálculo del faltante y casos límite con datos inconsistentes o vacíos.
 - `catalog.model.spec.ts`: configuración de los seis catálogos, filtros por relación, payloads de creación/edición y formato de columnas.
+- `product.model.spec.ts`: payloads de producto y presentación (incluida la conservación de la imagen), formatos de cantidad y dinero, etiquetas de estado de stock, resumen de presentaciones visibles y conteo de imágenes pendientes.
 
 El build de producción también valida plantillas estrictas y presupuestos de tamaño.
 
@@ -282,7 +299,7 @@ Salida: `dist/tamachihua-web/browser`.
 | Entregable | Alcance |
 |---|---|
 | **7.1 Base del frontend** | Proyecto, diseño, login, shell, guards, dashboard, 404 y documentación — **completado**; rediseño visual 7.1.1 con login asimétrico y gráficas propias — **completado** |
-| 7.2 Catálogos e inventario | Catálogos — **completado**; productos, presentaciones, precios y lotes — pendientes |
+| 7.2 Catálogos e inventario | Catálogos y productos con presentaciones — **completado**; precios y lotes — pendientes |
 | 7.3 Clientes | Listado, filtros, detalle, creación, edición, estado y crédito |
 | 7.4 Ventas | Listado, nueva venta, detalle, confirmación y cancelación |
 | 7.5 Facturación | Emisión, detalle, pagos y notas de crédito |
@@ -294,11 +311,12 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
 ## 11. Limitaciones conocidas
 
-- Solo el panel general y los catálogos están implementados; los demás módulos se agregan por entregable.
+- Solo el panel general, los catálogos y los productos con sus presentaciones están implementados; los demás módulos se agregan por entregable.
+- El cambio de precio y la gestión de lotes aún no tienen interfaz; el detalle muestra el precio vigente y las existencias en modo lectura.
+- La imagen de cada presentación se referencia por URL: no hay subida de archivos ni almacenamiento binario en el cliente.
 - No hay entorno de producción ni pipeline de despliegue del frontend todavía.
 - En producción se requiere un proxy inverso que enrute `/api` al backend y sirva el `index.html` para las rutas del router.
 - No hay pruebas E2E de navegador; la verificación actual es build, pruebas unitarias y arranque con proxy.
-- Las imágenes de producto se muestran por URL según el contrato del backend; no hay subida de archivos.
 
 ---
 
