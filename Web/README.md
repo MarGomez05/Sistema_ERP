@@ -2,7 +2,7 @@
 
 Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre, en esta primera entrega, la **base del frontend**: autenticación real, layout, navegación por rol y panel general con datos del backend.
 
-> Estado: **Fase 7.1 completada** (16/11/2026). Los módulos de catálogos, clientes, ventas y facturación se incorporan en entregables posteriores.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 en progreso** (17/11/2026) con los módulos de **catálogos de inventario** y de **productos y presentaciones**. Precios, lotes, clientes, ventas y facturación se incorporan en los siguientes entregables.
 
 ---
 
@@ -79,6 +79,7 @@ npx ng serve --port 4300      # puerto alternativo
 ### Autenticación
 
 - Login real contra `POST /api/auth/login` con `username` (usuario o correo) y `password`.
+- Composición editorial asimétrica: panel de marca con corte diagonal, tarjeta de acceso que invade el límite y mini panel ilustrativo (sin cifras ni datos simulados).
 - Validaciones de formulario alineadas al backend: campos obligatorios, usuario ≤ 50 caracteres y sin espacios únicamente.
 - Mostrar/ocultar contraseña, estado de carga y mensajes de error diferenciados para 401, 403 y fallo de conexión.
 - Sesión persistida en `localStorage` con expiración tomada de `expiresIn`.
@@ -115,15 +116,39 @@ Consume los endpoints reales y adapta la vista a los permisos efectivos del back
 
 Contenido por perfil:
 
-- **ADMIN / WAREHOUSE**: cinco KPI (productos activos, bajo stock, lotes activos, por vencer y vencidos), barra de composición de lotes activos, tabla paginada de bajo stock y tabla de lotes vencidos o por vencer con severidad.
-- **PURCHASING**: alerta de bajo stock y tabla paginada, orientada a reposición.
+- **ADMIN / WAREHOUSE**: cinco KPI (productos activos, bajo stock, lotes activos, por vencer y vencidos); dona de estado de los lotes activos (sin alerta / por vencer / vencidos), columnas de vencimientos por rango (vencidos, 0–7, 8–15 y 16–30 días), tabla paginada de bajo stock con barras de stock actual frente al mínimo de la página visible y tabla de lotes vencidos o por vencer con severidad.
+- **PURCHASING**: alerta de bajo stock, gráfica de barras de la página visible y tabla paginada, orientada a reposición.
 - **SELLER**: estado de bienvenida con sus datos de cuenta; los módulos de venta se habilitarán en el siguiente entregable.
+
+Las gráficas son SVG/CSS propios, sin Chart.js, ApexCharts ni otra dependencia. Solo representan los datos devueltos por `summary`, `low-stock` y `expiring-lots`; no se inventan tendencias ni comparaciones entre unidades distintas.
 
 Estados cubiertos: carga con skeletons, error con reintento por sección, listas vacías con mensaje explicativo y actualización manual de datos.
 
 ### Página 404
 
 Ruta comodín con identidad de marca y accesos al panel o al login según el estado de sesión.
+
+### Catálogos de inventario (7.2 en progreso)
+
+- Página única `/catalogs` con pestañas accesibles para categorías, tipos de producto, marcas, modelos, unidades de medida y presentaciones.
+- Listado paginado con búsqueda, filtro por estado y filtro por marca o unidad de medida según el catálogo.
+- Formulario lateral reutilizable con validaciones espejo del backend; los modelos y presentaciones cargan sus combos desde `/options`.
+- Baja lógica con `PATCH /{id}/status`, confirmación en línea y mensaje del backend cuando el catálogo tiene hijos activos.
+- Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN`.
+- Configuración declarativa en `catalog.model.ts` (`CATALOGS`, `toPayload`, `columnValue`) para no duplicar los seis listados.
+
+### Productos y presentaciones (7.2 en progreso)
+
+- Listado `/products` con búsqueda por nombre o código, filtros por categoría, tipo y estado, paginación y existencias por presentación en chips con color según `stockStatus`.
+- Alta y edición de producto en panel lateral: código, nombre, descripción, categoría, tipo, modelo opcional y bandera de vencimiento. El formulario conserva las opciones actuales aunque estén inactivas para no perder la referencia al editar.
+- Al crear un producto se navega a su detalle `/products/:id`, donde se concentran la información general y las presentaciones.
+- Detalle con tarjetas de presentación que reservan un espacio 16:9 para la imagen: si `imageUrl` existe se muestra, y si no aparece un marcador «Imagen pendiente · Espacio reservado». Una URL que falla cae al mismo marcador.
+- Cada tarjeta muestra existencia, stock mínimo, precio vigente, estado de stock y estado lógico; permite agregar, editar y activar/desactivar presentaciones con confirmación en línea.
+- El formulario de presentación edita código, stock mínimo, URL de imagen y texto alternativo, con vista previa y validación de `http(s)://` o ruta relativa iniciada en `/`. Como el `PUT` del backend reemplaza la imagen, el formulario siempre reenvía la URL vigente para no borrarla.
+- La subida de archivos no está implementada: la imagen se referencia por URL, tal como exige el contrato.
+- Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN` y `WAREHOUSE`. Los precios se muestran como lectura y su edición queda para el siguiente entregable de 7.2.
+- El listado no suma existencias entre presentaciones distintas: cada chip corresponde a una presentación con su propia unidad.
+- Si el backend rechaza una operación (código duplicado, presentación repetida, vencimiento con lotes activos, activación con catálogos inactivos), el mensaje del `400`/`409` se muestra en el formulario o en el toast.
 
 ---
 
@@ -145,9 +170,11 @@ La paleta se extrajo del logotipo en `Documentacion/Logo` y se centraliza en `sr
 Criterios aplicados:
 
 - Superficies claras, bordes suaves y sombras discretas.
+- Login editorial: panel de marca en degradado azul con corte diagonal, tarjeta de acceso que invade el límite y mini panel ilustrativo.
 - Colores pastel solo para fondos de estado (éxito, advertencia, peligro, información).
 - Tipografía **Inter** con fallback del sistema.
 - Animaciones sutiles (aparición, hover, transiciones) y respeto de `prefers-reduced-motion`.
+- Gráficas SVG/CSS propias con etiquetas accesibles y colores de estado; sin librerías de visualización.
 - Diseño responsive para escritorio, laptop, tablet y móvil.
 - Iconografía SVG de línea propia; sin emojis.
 - Textos de interfaz en español.
@@ -165,7 +192,7 @@ Web/
 │   ├── app/
 │   │   ├── core/
 │   │   │   ├── auth/          # modelo, servicio, guards e interceptor
-│   │   │   ├── http/          # interceptor de errores
+│   │   │   ├── http/          # interceptores y lectura de errores de la API
 │   │   │   ├── models/        # ApiErrorResponse, PageResponse
 │   │   │   └── ui/            # ToastService
 │   │   ├── layout/
@@ -175,8 +202,11 @@ Web/
 │   │   │   └── nav.config.ts
 │   │   ├── shared/ui/         # icon, button, badge, skeleton, empty-state,
 │   │   │                      # page-header, stat-card, pagination, toast-container
+│   │   │                      # y charts/ (donut, column, bar)
 │   │   ├── features/
 │   │   │   ├── auth/login/
+│   │   │   ├── catalogs/      # configuración, servicio, pestañas, listado y formulario
+│   │   │   ├── products/      # modelo, servicio, listado, detalle y formularios
 │   │   │   ├── dashboard/
 │   │   │   └── errors/
 │   │   ├── app.config.ts
@@ -202,6 +232,9 @@ Alias de importación disponibles: `@core/*`, `@shared/*`, `@layout/*`, `@featur
 |---|---|---|
 | `/login` | Solo invitados | Inicio de sesión |
 | `/dashboard` | Autenticados | Panel adaptado por rol |
+| `/catalogs` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Catálogos de inventario |
+| `/products` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Listado de productos |
+| `/products/:id` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Detalle y presentaciones del producto |
 | `/` | Autenticados | Redirige a `/dashboard` |
 | `**` | Público | Página no encontrada |
 
@@ -220,6 +253,7 @@ La ruta del shell está protegida con `authGuard`; los módulos se cargan con `l
 - `PageHeaderComponent`: título, subtítulo y acciones.
 - `PaginationComponent`: rango visible, página actual y navegación anterior/siguiente.
 - `ToastContainerComponent`: notificaciones no bloqueantes con cierre y temporizador.
+- `DonutChartComponent`, `ColumnChartComponent` y `BarChartComponent`: gráficas SVG/CSS accesibles con etiqueta ARIA y leyenda; sin datos simulados ni dependencias externas.
 
 ---
 
@@ -243,7 +277,14 @@ La ruta del shell está protegida con `authGuard`; los módulos se cargan con `l
 npm test -- --watch=false
 ```
 
-La prueba incluida valida el mapeo de errores de login (401, 403, fallo de conexión, mensaje del backend y error genérico). El build de producción también valida plantillas estrictas y presupuestos de tamaño.
+La suite incluye:
+
+- `auth.service.spec.ts`: mapeo de errores de login (401, 403, fallo de conexión, mensaje del backend y error genérico) y comportamiento del servicio de autenticación.
+- `dashboard.charts.spec.ts`: reparto de la dona de lotes, rangos de vencimiento, cálculo del faltante y casos límite con datos inconsistentes o vacíos.
+- `catalog.model.spec.ts`: configuración de los seis catálogos, filtros por relación, payloads de creación/edición y formato de columnas.
+- `product.model.spec.ts`: payloads de producto y presentación (incluida la conservación de la imagen), formatos de cantidad y dinero, etiquetas de estado de stock, resumen de presentaciones visibles y conteo de imágenes pendientes.
+
+El build de producción también valida plantillas estrictas y presupuestos de tamaño.
 
 ```bash
 npm run build
@@ -257,8 +298,8 @@ Salida: `dist/tamachihua-web/browser`.
 
 | Entregable | Alcance |
 |---|---|
-| **7.1 Base del frontend** | Proyecto, diseño, login, shell, guards, dashboard, 404 y documentación — **completado** |
-| 7.2 Catálogos e inventario | Catálogos, productos, presentaciones, precios y lotes |
+| **7.1 Base del frontend** | Proyecto, diseño, login, shell, guards, dashboard, 404 y documentación — **completado**; rediseño visual 7.1.1 con login asimétrico y gráficas propias — **completado** |
+| 7.2 Catálogos e inventario | Catálogos y productos con presentaciones — **completado**; precios y lotes — pendientes |
 | 7.3 Clientes | Listado, filtros, detalle, creación, edición, estado y crédito |
 | 7.4 Ventas | Listado, nueva venta, detalle, confirmación y cancelación |
 | 7.5 Facturación | Emisión, detalle, pagos y notas de crédito |
@@ -270,11 +311,12 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
 ## 11. Limitaciones conocidas
 
-- Solo el panel general está implementado; los demás módulos se agregan por entregable.
+- Solo el panel general, los catálogos y los productos con sus presentaciones están implementados; los demás módulos se agregan por entregable.
+- El cambio de precio y la gestión de lotes aún no tienen interfaz; el detalle muestra el precio vigente y las existencias en modo lectura.
+- La imagen de cada presentación se referencia por URL: no hay subida de archivos ni almacenamiento binario en el cliente.
 - No hay entorno de producción ni pipeline de despliegue del frontend todavía.
 - En producción se requiere un proxy inverso que enrute `/api` al backend y sirva el `index.html` para las rutas del router.
 - No hay pruebas E2E de navegador; la verificación actual es build, pruebas unitarias y arranque con proxy.
-- Las imágenes de producto se muestran por URL según el contrato del backend; no hay subida de archivos.
 
 ---
 

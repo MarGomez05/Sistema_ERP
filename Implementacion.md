@@ -446,6 +446,8 @@ Web/
 │   ├── layout/          # shell, sidebar, header y navegación
 │   └── features/
 │       ├── auth/        # login
+│       ├── catalogs/    # catálogos de inventario
+│       ├── products/    # listado, detalle, presentaciones y formularios
 │       ├── dashboard/   # panel general por rol
 │       └── errors/      # 404
 ├── src/styles/          # tokens, base, componentes y utilidades SCSS
@@ -487,6 +489,46 @@ Implementado el 16/11/2026:
 - Dashboard con datos reales y adaptado a permisos: `ADMIN`/`WAREHOUSE` ven resumen y vencimientos; `PURCHASING` ve bajo stock; `SELLER` recibe bienvenida hasta el módulo de ventas.
 - Página 404, estados de carga, errores con reintento, listas vacías y paginación.
 - Verificado con `npm run build`, `npm test -- --watch=false` y `ng serve` con proxy.
+
+### 9.5 Rediseño visual 7.1.1 — Login y gráficas del panel
+
+Implementado el 17/11/2026:
+
+- Login editorial asimétrico (~58/42) con panel de marca en degradado, corte diagonal, tarjeta de acceso que invade el límite y mini panel ilustrativo sin cifras ni datos simulados. Se conservan formulario, validaciones, mostrar/ocultar contraseña, errores y redirección interna segura.
+- Gráficas SVG/CSS propias en `shared/ui/charts`: dona del estado de los lotes activos, columnas de vencimientos por rango (vencidos, 0–7, 8–15 y 16–30 días) y barras de stock actual frente al mínimo de la página visible.
+- Cálculos puros en `features/dashboard/dashboard.charts.ts`, con pruebas Vitest para la dona, los rangos, el faltante y los casos límite.
+- Sin dependencias nuevas (ni Chart.js/ApexCharts) y sin cambios en backend, contratos ni reglas de negocio.
+- Verificación: `npm run build` en verde (inicial ~307 kB) y `npm test -- --watch=false` con 16 pruebas en verde.
+
+### 9.6 Entregable 7.2 — Catálogos de inventario
+
+Implementado el 17/11/2026 (primera parte del entregable 7.2):
+
+- Página única `/catalogs` con pestañas accesibles para categorías, tipos de producto, marcas, modelos, unidades de medida y presentaciones.
+- Configuración declarativa en `features/catalogs/catalog.model.ts` (`CATALOGS`, `toPayload` y `columnValue`) que dirige columnas, filtros, formulario y payload de cada recurso.
+- `CatalogService` sobre `/api/{recurso}`: listado paginado con `search`, `isActive` y filtro `brandId`/`measureUnitId`, `/options` para combos, creación, edición y `PATCH /{id}/status`.
+- Formulario lateral reutilizable con Reactive Forms, validaciones espejo del backend, mensajes en español y combos de marca/unidad cargados desde `/options`.
+- Listados con búsqueda, filtros, paginación, skeletons, estado vacío y error con reintento; la desactivación se confirma en línea y los conflictos 409 se muestran con el mensaje del backend.
+- Seguridad coherente con `SecurityConfig`: lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN`; ruta protegida con `roleGuard` y sección «Inventario» en la navegación.
+- Nuevo helper `core/http/api-error.ts` y iconos SVG propios (`plus`, `edit`, `power`, `tag`, `layers`, `ruler`).
+- Verificación: `npm run build` en verde (inicial 308.88 kB) y `npm test -- --watch=false` con 26 pruebas en verde.
+- Pendiente del entregable 7.2: productos, presentaciones de producto, precios y lotes.
+
+### 9.7 Entregable 7.2 — Productos y presentaciones
+
+Implementado el 17/11/2026 (segunda parte del entregable 7.2):
+
+- Listado `/products` con búsqueda por nombre o código, filtros por categoría, tipo y estado, paginación y existencias por presentación en chips con color según `stockStatus`; no se suman unidades de presentaciones distintas.
+- Alta y edición de producto en panel lateral (`code`, `name`, `description`, `categoryId`, `productTypeId`, `productModelId` y `requiresExpiration`); el contrato no incluye `taxRate`, así que el cliente no lo envía.
+- Detalle `/products/:id` con información general y tarjetas de presentación que reservan un espacio 16:9 para la imagen: se muestra si `imageUrl` existe y, si no o si falla, un marcador «Imagen pendiente · Espacio reservado».
+- Gestión de presentaciones por producto: `GET`/`POST /api/products/{id}/presentations`, `PUT .../{presentationId}` y `PATCH .../{presentationId}/status`, con confirmación en línea al desactivar.
+- El formulario de presentación valida `http(s)://` o ruta relativa iniciada en `/` (máx. 500 caracteres) y `imageAlt` (máx. 150). Como el `PUT` del backend borra la imagen si no se envía, el formulario siempre reenvía la URL vigente.
+- Precio vigente y existencias en modo lectura; el cambio de precio y los lotes quedan pendientes de la siguiente parte.
+- Permisos: lectura `ADMIN`/`WAREHOUSE`/`PURCHASING` y escritura `ADMIN`/`WAREHOUSE`, coherentes con `SecurityConfig`; opción «Productos» en la sección «Inventario».
+- `ProductService` obtiene las opciones de los combos desde `/api/{categories|product-types|models|presentations}/options`.
+- Iconos SVG añadidos: `image` y `arrowLeft`. Pruebas nuevas en `features/products/product.model.spec.ts`.
+- Verificación: `npm run build` en verde (inicial 309.80 kB) y `npm test -- --watch=false` con 40 pruebas en verde.
+- Pendiente del entregable 7.2: cambio de precio, historial de precios y lotes.
 
 ## 10. Testing y CI/CD
 
@@ -588,7 +630,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | **En progreso**: 7.1 base completada (16/11/2026); 7.2–7.6 pendientes |
+| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos y productos con presentaciones completados (17/11/2026); precios y lotes de 7.2 y los entregables 7.3–7.6 pendientes |
 | 8 | Reportes | Pendiente |
 | 9 | Endurecimiento | Pendiente |
 
@@ -647,9 +689,9 @@ Detalle de la Fase 6:
 Detalle de la Fase 7.1:
 
 - Proyecto Angular 22 standalone en `Web/`, con Vitest, `strictTemplates`, `OnPush`, alias de importación y proxy `/api` → `http://localhost:8080`.
-- Sistema de diseño propio: tokens SCSS con la paleta del logo, tipografía Inter, componentes compartidos (`icon`, `button`, `badge`, `skeleton`, `empty-state`, `page-header`, `stat-card`, `pagination`, `toast-container`) y `prefers-reduced-motion`.
+- Sistema de diseño propio: tokens SCSS con la paleta del logo, tipografía Inter, componentes compartidos (`icon`, `button`, `badge`, `skeleton`, `empty-state`, `page-header`, `stat-card`, `pagination`, `toast-container` y `charts`) y `prefers-reduced-motion`.
 - Autenticación real contra `/api/auth/login`, sesión en `localStorage` con expiración, restauración con `/api/auth/me`, guards e interceptores, y redirección interna segura.
 - Layout con sidebar contraíble y responsive, header con perfil y breadcrumb, notificaciones y enlace de salto al contenido.
-- Dashboard con `summary`, `low-stock` y `expiring-lots`; KPIs, composición de lotes, tablas, paginación, skeletons, estados vacíos y reintento por sección. La vista respeta los permisos reales: `SELLER` no consume endpoints restringidos.
+- Dashboard con `summary`, `low-stock` y `expiring-lots`; KPIs, dona de estado de lotes, columnas de vencimientos por rango, barras de stock actual frente al mínimo, tablas, paginación, skeletons, estados vacíos y reintento por sección. La vista respeta los permisos reales: `SELLER` no consume endpoints restringidos.
 - Página 404 y documentación del cliente en `Web/README.md`.
-- Verificación: build de producción en verde, 5 pruebas unitarias en verde y dev server con proxy comprobado.
+- Verificación: build de producción en verde, 5 pruebas unitarias en verde al cierre de 7.1 y 16 pruebas tras el rediseño 7.1.1; dev server con proxy comprobado.

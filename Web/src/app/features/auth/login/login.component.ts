@@ -23,7 +23,7 @@ import { environment } from '@env/environment';
     <main class="login">
       <!-- Panel de marca -->
       <section class="login__brand" aria-label="TAMACHIHUA ERP">
-        <div class="login__brand-top">
+        <header class="login__brand-top">
           <img
             class="login__logo"
             src="brand/logo-horizontal-blanco.png"
@@ -31,31 +31,68 @@ import { environment } from '@env/environment';
             width="2181"
             height="420"
           />
-        </div>
+          <span class="login__chip">
+            <span class="login__chip-dot" aria-hidden="true"></span>
+            Inventario · Ventas · Facturación
+          </span>
+        </header>
 
         <div class="login__brand-body">
           <p class="login__eyebrow">Sistema de gestión empresarial</p>
           <h2 class="login__headline">
-            Controla tu inventario, ventas y facturación en un solo lugar.
+            Controla tu inventario, ventas y facturación en un mismo lugar.
           </h2>
           <p class="login__description">
             Información clara para decidir mejor: existencias por lote, vencimientos, clientes y
             documentos comerciales siempre a la mano.
           </p>
 
-          <ul class="login__features">
-            @for (feature of features; track feature.title) {
-              <li class="login__feature">
-                <span class="login__feature-icon">
-                  <app-icon [name]="feature.icon" [size]="18" />
-                </span>
-                <div>
-                  <p class="login__feature-title">{{ feature.title }}</p>
-                  <p class="login__feature-text">{{ feature.text }}</p>
-                </div>
-              </li>
-            }
-          </ul>
+          <!-- Mini panel ilustrativo: sin cifras ni datos reales. -->
+          <div class="login__preview">
+            <div class="login__preview-bar" aria-hidden="true">
+              <span class="login__preview-dots"><i></i><i></i><i></i></span>
+              <span class="login__preview-label">Panel general</span>
+              <span class="login__preview-tag">ERP</span>
+            </div>
+
+            <ul class="login__features">
+              @for (feature of features; track feature.title) {
+                <li class="login__feature">
+                  <span class="login__feature-icon">
+                    <app-icon [name]="feature.icon" [size]="18" />
+                  </span>
+                  <div class="login__feature-copy">
+                    <p class="login__feature-title">{{ feature.title }}</p>
+                    <p class="login__feature-text">{{ feature.text }}</p>
+                  </div>
+                </li>
+              }
+            </ul>
+
+            <div class="login__preview-chart" aria-hidden="true">
+              <svg viewBox="0 0 240 44" preserveAspectRatio="none" focusable="false">
+                <defs>
+                  <linearGradient id="login-preview-fill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="currentColor" stop-opacity="0.28" />
+                    <stop offset="100%" stop-color="currentColor" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                <polyline
+                  points="0,34 30,28 60,31 90,18 120,22 150,12 180,16 210,7 240,10 240,44 0,44"
+                  fill="url(#login-preview-fill)"
+                  stroke="none"
+                />
+                <polyline
+                  points="0,34 30,28 60,31 90,18 120,22 150,12 180,16 210,7 240,10"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg>
+            </div>
+          </div>
         </div>
 
         <p class="login__brand-footer">TAMACHIHUA ERP · {{ version }}</p>
@@ -71,109 +108,117 @@ import { environment } from '@env/environment';
           height="420"
         />
 
-        <div class="login__card">
-          <div class="login__card-head">
-            <span class="login__badge">
-              <app-icon name="lock" [size]="15" />
-              Acceso seguro
-            </span>
-            <h1 class="login__title">Iniciar sesión</h1>
-            <p class="login__subtitle">
-              Ingresa con las credenciales asignadas por el administrador.
+        <div class="login__stack">
+          <div class="login__card">
+            <div class="login__card-head">
+              <span class="login__badge">
+                <app-icon name="lock" [size]="15" />
+                Acceso seguro
+              </span>
+              <h1 class="login__title">Iniciar sesión</h1>
+              <p class="login__subtitle">
+                Ingresa con las credenciales asignadas por el administrador.
+              </p>
+            </div>
+
+            <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
+              <div class="field">
+                <label class="field__label" for="username">
+                  Usuario o correo
+                  <span class="field__required" aria-hidden="true">*</span>
+                </label>
+
+                <div class="login__control">
+                  <span class="login__control-icon" aria-hidden="true">
+                    <app-icon name="user" [size]="18" />
+                  </span>
+                  <input
+                    id="username"
+                    class="field__control login__input"
+                    type="text"
+                    formControlName="username"
+                    autocomplete="username"
+                    placeholder="nombre de usuario"
+                    [class.is-invalid]="showError(usernameControl)"
+                    [attr.aria-invalid]="showError(usernameControl)"
+                    [attr.aria-describedby]="showError(usernameControl) ? 'username-error' : null"
+                  />
+                </div>
+
+                @if (showError(usernameControl)) {
+                  <p id="username-error" class="field__error">
+                    <app-icon name="alertCircle" [size]="14" />
+                    {{ usernameError }}
+                  </p>
+                }
+              </div>
+
+              <div class="field">
+                <label class="field__label" for="password">
+                  Contraseña
+                  <span class="field__required" aria-hidden="true">*</span>
+                </label>
+
+                <div class="login__control">
+                  <span class="login__control-icon" aria-hidden="true">
+                    <app-icon name="lock" [size]="18" />
+                  </span>
+                  <input
+                    id="password"
+                    class="field__control login__input login__input--password"
+                    [type]="showPassword() ? 'text' : 'password'"
+                    formControlName="password"
+                    autocomplete="current-password"
+                    placeholder="contraseña"
+                    [class.is-invalid]="showError(passwordControl)"
+                    [attr.aria-invalid]="showError(passwordControl)"
+                    [attr.aria-describedby]="showError(passwordControl) ? 'password-error' : null"
+                  />
+                  <button
+                    type="button"
+                    class="login__reveal"
+                    [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                    [attr.aria-pressed]="showPassword()"
+                    (click)="togglePassword()"
+                  >
+                    <app-icon [name]="showPassword() ? 'eyeOff' : 'eye'" [size]="18" />
+                  </button>
+                </div>
+
+                @if (showError(passwordControl)) {
+                  <p id="password-error" class="field__error">
+                    <app-icon name="alertCircle" [size]="14" />
+                    {{ passwordError }}
+                  </p>
+                }
+              </div>
+
+              @if (errorMessage()) {
+                <div class="login__alert" role="alert">
+                  <app-icon name="alertCircle" [size]="18" />
+                  <p>{{ errorMessage() }}</p>
+                </div>
+              }
+
+              <button
+                appButton
+                type="submit"
+                class="u-full"
+                [loading]="submitting()"
+                [block]="true"
+              >
+                <app-icon name="logout" [size]="17" />
+                Ingresar al sistema
+              </button>
+            </form>
+
+            <p class="login__help">
+              ¿Olvidaste tu contraseña? Solicita el restablecimiento al administrador del sistema.
             </p>
           </div>
 
-          <form class="login__form" [formGroup]="form" (ngSubmit)="submit()" novalidate>
-            <div class="field">
-              <label class="field__label" for="username">
-                Usuario o correo
-                <span class="field__required" aria-hidden="true">*</span>
-              </label>
-
-              <div class="login__control">
-                <span class="login__control-icon" aria-hidden="true">
-                  <app-icon name="user" [size]="18" />
-                </span>
-                <input
-                  id="username"
-                  class="field__control login__input"
-                  type="text"
-                  formControlName="username"
-                  autocomplete="username"
-                  placeholder="nombre de usuario"
-                  [class.is-invalid]="showError(usernameControl)"
-                  [attr.aria-invalid]="showError(usernameControl)"
-                  [attr.aria-describedby]="showError(usernameControl) ? 'username-error' : null"
-                />
-              </div>
-
-              @if (showError(usernameControl)) {
-                <p id="username-error" class="field__error">
-                  <app-icon name="alertCircle" [size]="14" />
-                  {{ usernameError }}
-                </p>
-              }
-            </div>
-
-            <div class="field">
-              <label class="field__label" for="password">
-                Contraseña
-                <span class="field__required" aria-hidden="true">*</span>
-              </label>
-
-              <div class="login__control">
-                <span class="login__control-icon" aria-hidden="true">
-                  <app-icon name="lock" [size]="18" />
-                </span>
-                <input
-                  id="password"
-                  class="field__control login__input login__input--password"
-                  [type]="showPassword() ? 'text' : 'password'"
-                  formControlName="password"
-                  autocomplete="current-password"
-                  placeholder="contraseña"
-                  [class.is-invalid]="showError(passwordControl)"
-                  [attr.aria-invalid]="showError(passwordControl)"
-                  [attr.aria-describedby]="showError(passwordControl) ? 'password-error' : null"
-                />
-                <button
-                  type="button"
-                  class="login__reveal"
-                  [attr.aria-label]="showPassword() ? 'Ocultar contraseña' : 'Mostrar contraseña'"
-                  [attr.aria-pressed]="showPassword()"
-                  (click)="togglePassword()"
-                >
-                  <app-icon [name]="showPassword() ? 'eyeOff' : 'eye'" [size]="18" />
-                </button>
-              </div>
-
-              @if (showError(passwordControl)) {
-                <p id="password-error" class="field__error">
-                  <app-icon name="alertCircle" [size]="14" />
-                  {{ passwordError }}
-                </p>
-              }
-            </div>
-
-            @if (errorMessage()) {
-              <div class="login__alert" role="alert">
-                <app-icon name="alertCircle" [size]="18" />
-                <p>{{ errorMessage() }}</p>
-              </div>
-            }
-
-            <button appButton type="submit" class="u-full" [loading]="submitting()" [block]="true">
-              <app-icon name="logout" [size]="17" />
-              Ingresar al sistema
-            </button>
-          </form>
-
-          <p class="login__help">
-            ¿Olvidaste tu contraseña? Solicita el restablecimiento al administrador del sistema.
-          </p>
+          <p class="login__legal">Uso exclusivo del personal autorizado de TAMACHIHUA.</p>
         </div>
-
-        <p class="login__legal">Uso exclusivo del personal autorizado de TAMACHIHUA.</p>
       </section>
     </main>
   `,
@@ -184,9 +229,10 @@ import { environment } from '@env/environment';
 
     .login {
       display: grid;
-      grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+      grid-template-columns: minmax(0, 58fr) minmax(0, 42fr);
       min-height: 100dvh;
-      background: var(--surface);
+      overflow: hidden;
+      background: var(--canvas);
     }
 
     /* ---------- Panel de marca ---------- */
@@ -194,11 +240,12 @@ import { environment } from '@env/environment';
       position: relative;
       display: flex;
       flex-direction: column;
-      gap: var(--space-6);
-      padding: 44px 52px;
+      gap: 26px;
+      padding: 46px 140px 38px 56px;
       overflow: hidden;
+      clip-path: polygon(0 0, 100% 0, calc(100% - 96px) 100%, 0 100%);
       background:
-        radial-gradient(1200px 620px at 8% -10%, rgba(0, 168, 255, 0.24), transparent 62%),
+        radial-gradient(1200px 620px at 8% -10%, rgba(0, 170, 255, 0.62), transparent 62%),
         radial-gradient(900px 520px at 100% 105%, rgba(0, 168, 255, 0.18), transparent 60%),
         linear-gradient(150deg, var(--brand-700) 0%, var(--brand-600) 48%, #05558f 100%);
       color: #eaf4fc;
@@ -223,9 +270,41 @@ import { environment } from '@env/environment';
       z-index: 1;
     }
 
+    .login__brand-top {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+
     .login__logo {
-      width: min(260px, 62%);
+      width: min(214px, 52%);
       height: auto;
+    }
+
+    .login__chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: var(--radius-pill);
+      color: rgba(234, 244, 252, 0.84);
+      font-size: 0.625rem;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .login__chip-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent-200);
+      box-shadow: 0 0 0 4px rgba(184, 230, 255, 0.18);
     }
 
     .login__brand-body {
@@ -248,23 +327,91 @@ import { environment } from '@env/environment';
 
     .login__headline {
       color: #ffffff;
-      font-size: clamp(1.65rem, 2.4vw, 2.15rem);
+      font-size: clamp(1.85rem, 2.45vw, 2.6rem);
       font-weight: var(--weight-bold);
-      line-height: 1.22;
-      letter-spacing: -0.02em;
+      line-height: 1.16;
+      letter-spacing: -0.025em;
+      text-wrap: balance;
     }
 
     .login__description {
+      max-width: 46ch;
       margin-top: 16px;
       color: rgba(234, 244, 252, 0.82);
       font-size: var(--text-base);
       line-height: 1.6;
     }
 
+    /* ---------- Mini panel ilustrativo ---------- */
+    .login__preview {
+      position: relative;
+      margin-top: 30px;
+      padding: 16px 18px 14px;
+      background: rgba(7, 45, 78, 0.34);
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius-lg);
+      box-shadow: 0 24px 48px rgba(2, 28, 52, 0.26);
+      backdrop-filter: blur(10px);
+      animation: rise var(--transition-slow) 90ms both;
+    }
+
+    .login__preview-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding-bottom: 12px;
+      margin-bottom: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .login__preview-dots {
+      display: inline-flex;
+      gap: 5px;
+    }
+
+    .login__preview-dots i {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.26);
+    }
+
+    .login__preview-dots i:first-child {
+      background: rgba(255, 138, 128, 0.78);
+    }
+
+    .login__preview-dots i:nth-child(2) {
+      background: rgba(244, 200, 96, 0.78);
+    }
+
+    .login__preview-dots i:last-child {
+      background: rgba(126, 216, 168, 0.78);
+    }
+
+    .login__preview-label {
+      flex: 1;
+      color: rgba(234, 244, 252, 0.66);
+      font-size: 0.625rem;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .login__preview-tag {
+      padding: 2px 8px;
+      background: rgba(0, 168, 255, 0.16);
+      border: 1px solid rgba(0, 168, 255, 0.28);
+      border-radius: var(--radius-pill);
+      color: var(--accent-200);
+      font-size: 0.5625rem;
+      font-weight: var(--weight-semibold);
+      letter-spacing: 0.1em;
+    }
+
     .login__features {
       display: grid;
-      gap: 16px;
-      margin: 32px 0 0;
+      gap: 14px;
+      margin: 0;
       padding: 0;
       list-style: none;
     }
@@ -280,12 +427,16 @@ import { environment } from '@env/environment';
       align-items: center;
       justify-content: center;
       flex: none;
-      width: 36px;
-      height: 36px;
-      background: rgba(255, 255, 255, 0.12);
+      width: 34px;
+      height: 34px;
+      background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.16);
-      border-radius: var(--radius-md);
-      color: #ffffff;
+      border-radius: 10px;
+      color: var(--accent-200);
+    }
+
+    .login__feature-copy {
+      min-width: 0;
     }
 
     .login__feature-title {
@@ -296,27 +447,43 @@ import { environment } from '@env/environment';
 
     .login__feature-text {
       margin-top: 2px;
-      color: rgba(234, 244, 252, 0.74);
+      color: rgba(234, 244, 252, 0.72);
       font-size: var(--text-xs);
       line-height: 1.5;
     }
 
+    .login__preview-chart {
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      color: rgba(127, 220, 255, 0.9);
+    }
+
+    .login__preview-chart svg {
+      display: block;
+      width: 100%;
+      height: 38px;
+    }
+
     .login__brand-footer {
-      color: rgba(234, 244, 252, 0.6);
+      color: rgba(234, 244, 252, 0.58);
       font-size: var(--text-xs);
       letter-spacing: 0.04em;
     }
 
     /* ---------- Formulario ---------- */
     .login__panel {
+      position: relative;
+      z-index: 2;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      min-height: 100dvh;
       gap: 22px;
-      padding: 48px 32px;
+      padding: 48px 40px 40px 0;
       background:
-        radial-gradient(760px 420px at 100% 0%, var(--brand-50), transparent 66%), var(--canvas);
+        radial-gradient(680px 420px at 100% 0%, var(--brand-50), transparent 68%), var(--canvas);
     }
 
     .login__mobile-logo {
@@ -326,15 +493,37 @@ import { environment } from '@env/environment';
       margin-bottom: 4px;
     }
 
+    .login__stack {
+      position: relative;
+      left: -30%;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      width: min(460px, 100%);
+    }
+
     .login__card {
+      position: relative;
       width: 100%;
-      max-width: 424px;
-      padding: 36px 34px 30px;
+      padding: 38px 36px 32px;
       background: var(--surface);
       border: 1px solid var(--border);
       border-radius: var(--radius-xl);
-      box-shadow: var(--shadow-md);
+      box-shadow:
+        0 28px 60px rgba(6, 45, 80, 0.16),
+        var(--shadow-sm);
       animation: rise var(--transition-slow) both;
+    }
+
+    .login__card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 36px;
+      right: 36px;
+      height: 2px;
+      background: linear-gradient(90deg, var(--accent-500), transparent);
+      opacity: 0.55;
     }
 
     .login__card-head {
@@ -451,11 +640,12 @@ import { environment } from '@env/environment';
     .login__legal {
       color: var(--text-subtle);
       font-size: var(--text-xs);
+      line-height: 1.5;
       text-align: center;
     }
 
     /* ---------- Responsive ---------- */
-    @media (max-width: 960px) {
+    @media (max-width: 1024px) {
       .login {
         grid-template-columns: 1fr;
       }
@@ -469,6 +659,11 @@ import { environment } from '@env/environment';
         padding: 32px 20px;
       }
 
+      .login__stack {
+        left: 0;
+        width: min(460px, 100%);
+      }
+
       .login__mobile-logo {
         display: block;
       }
@@ -478,6 +673,11 @@ import { environment } from '@env/environment';
       .login__card {
         padding: 28px 22px 24px;
         border-radius: var(--radius-lg);
+      }
+
+      .login__card::before {
+        left: 22px;
+        right: 22px;
       }
     }
   `,
