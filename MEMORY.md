@@ -1,8 +1,8 @@
 # MEMORY.md — TAMACHIHUA-ERP
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
-> Última actualización: 16/11/2026.
-> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL) y **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404). API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con pruebas en verde.
+> Última actualización: 17/11/2026.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL) y **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404), con el rediseño visual **7.1.1** (login asimétrico y gráficas SVG/CSS propias). API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 16 pruebas en verde.
 
 ## 1. Resumen
 
@@ -47,7 +47,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Aún no hay subida de archivos ni almacenamiento local/S3 (D-06).
 - Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes, ventas, facturación e imágenes, y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard y página 404; documentado en `Web/README.md`.
+- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard con gráficas SVG/CSS propias y página 404; documentado en `Web/README.md`.
 - Rama de trabajo actual: `feature/web-base`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
@@ -130,6 +130,17 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Documentación del cliente en `Web/README.md`; `README.md`, `AGENTS.md`, `Implementacion.md` y `MEMORY.md` actualizados con la ruta `Web/`.
 - Pendiente para siguientes entregables: catálogos/inventario, clientes, ventas, facturación y reportes.
 
+### Avance 17/11/2026 — Rediseño visual 7.1.1 (login y gráficas)
+
+- Login editorial asimétrico (~58/42) con panel de marca en degradado, corte diagonal, tarjeta de acceso que invade el límite y mini panel ilustrativo sin cifras ni datos simulados.
+- Se conservan el formulario reactivo, las validaciones, el mostrar/ocultar contraseña, los errores diferenciados, la redirección interna segura y el texto/acento del borrador previo.
+- Gráficas SVG/CSS propias en `Web/src/app/shared/ui/charts/`: `donut-chart`, `column-chart` y `bar-chart`, con `chart.model.ts` y etiquetas ARIA.
+- Cálculos puros en `features/dashboard/dashboard.charts.ts`: dona de estado de lotes, rangos de vencimiento (vencidos, 0–7, 8–15 y 16–30 días) y faltante de stock.
+- Dashboard: fila analítica con dona y columnas; barras de stock actual frente al mínimo de la página visible en el panel de bajo stock; skeletons y estados vacíos por gráfica.
+- Sin dependencias nuevas ni cambios en backend, contratos o reglas de negocio; `prefers-reduced-motion` se mantiene.
+- Verificación: `npm run build` en verde (inicial 307.04 kB) y `npm test -- --watch=false` con 16 pruebas en verde (auth y cálculos de gráficas).
+- Documentación actualizada: `Web/README.md`, `Implementacion.md` y `MEMORY.md`.
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -163,6 +174,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-16 | La nota de crédito copia el snapshot, cancela la factura original y la venta asociada, y devuelve stock solo cuando `returnStock = true` | Aplicada |
 | D-17 | La imagen de una presentación se asigna con un endpoint JSON que guarda la URL o ruta relativa; la subida `multipart` con almacenamiento local/S3 queda para una fase posterior | Aplicada |
 | D-18 | El frontend usa un sistema de diseño propio con SCSS y tokens (sin Angular Material ni Tailwind), iconos SVG propios y consumo de la API por ruta relativa `/api` con proxy de desarrollo hacia `localhost:8080` | Aplicada |
+| D-19 | Las gráficas del dashboard son componentes SVG/CSS propios (`donut`, `column`, `bar`), sin librerías de visualización, y solo representan datos reales de `summary`, `low-stock` y `expiring-lots` | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -315,6 +327,7 @@ npm test -- --watch=false
 - Ejecutar la suite con Testcontainers cuando haya Docker disponible.
 - Configurar CI/CD.
 - Frontend: implementar los entregables 7.2 a 7.6 (catálogos, clientes, ventas, facturación y reportes) sobre la base ya creada en `Web/`.
+- Frontend: validar visualmente el rediseño 7.1.1 en navegador con backend y credenciales reales; en el entorno de trabajo no estaban disponibles.
 - Frontend: definir estrategia de despliegue con proxy inverso para `/api`.
 - Regenerar diagramas de arquitectura y clases.
 - Documentación base ya actualizada; falta validarla con el equipo.

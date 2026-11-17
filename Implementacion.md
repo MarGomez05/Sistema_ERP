@@ -488,6 +488,16 @@ Implementado el 16/11/2026:
 - Página 404, estados de carga, errores con reintento, listas vacías y paginación.
 - Verificado con `npm run build`, `npm test -- --watch=false` y `ng serve` con proxy.
 
+### 9.5 Rediseño visual 7.1.1 — Login y gráficas del panel
+
+Implementado el 17/11/2026:
+
+- Login editorial asimétrico (~58/42) con panel de marca en degradado, corte diagonal, tarjeta de acceso que invade el límite y mini panel ilustrativo sin cifras ni datos simulados. Se conservan formulario, validaciones, mostrar/ocultar contraseña, errores y redirección interna segura.
+- Gráficas SVG/CSS propias en `shared/ui/charts`: dona del estado de los lotes activos, columnas de vencimientos por rango (vencidos, 0–7, 8–15 y 16–30 días) y barras de stock actual frente al mínimo de la página visible.
+- Cálculos puros en `features/dashboard/dashboard.charts.ts`, con pruebas Vitest para la dona, los rangos, el faltante y los casos límite.
+- Sin dependencias nuevas (ni Chart.js/ApexCharts) y sin cambios en backend, contratos ni reglas de negocio.
+- Verificación: `npm run build` en verde (inicial ~307 kB) y `npm test -- --watch=false` con 16 pruebas en verde.
+
 ## 10. Testing y CI/CD
 
 ### 10.1 Backend
@@ -647,9 +657,9 @@ Detalle de la Fase 6:
 Detalle de la Fase 7.1:
 
 - Proyecto Angular 22 standalone en `Web/`, con Vitest, `strictTemplates`, `OnPush`, alias de importación y proxy `/api` → `http://localhost:8080`.
-- Sistema de diseño propio: tokens SCSS con la paleta del logo, tipografía Inter, componentes compartidos (`icon`, `button`, `badge`, `skeleton`, `empty-state`, `page-header`, `stat-card`, `pagination`, `toast-container`) y `prefers-reduced-motion`.
+- Sistema de diseño propio: tokens SCSS con la paleta del logo, tipografía Inter, componentes compartidos (`icon`, `button`, `badge`, `skeleton`, `empty-state`, `page-header`, `stat-card`, `pagination`, `toast-container` y `charts`) y `prefers-reduced-motion`.
 - Autenticación real contra `/api/auth/login`, sesión en `localStorage` con expiración, restauración con `/api/auth/me`, guards e interceptores, y redirección interna segura.
 - Layout con sidebar contraíble y responsive, header con perfil y breadcrumb, notificaciones y enlace de salto al contenido.
-- Dashboard con `summary`, `low-stock` y `expiring-lots`; KPIs, composición de lotes, tablas, paginación, skeletons, estados vacíos y reintento por sección. La vista respeta los permisos reales: `SELLER` no consume endpoints restringidos.
+- Dashboard con `summary`, `low-stock` y `expiring-lots`; KPIs, dona de estado de lotes, columnas de vencimientos por rango, barras de stock actual frente al mínimo, tablas, paginación, skeletons, estados vacíos y reintento por sección. La vista respeta los permisos reales: `SELLER` no consume endpoints restringidos.
 - Página 404 y documentación del cliente en `Web/README.md`.
-- Verificación: build de producción en verde, 5 pruebas unitarias en verde y dev server con proxy comprobado.
+- Verificación: build de producción en verde, 5 pruebas unitarias en verde al cierre de 7.1 y 16 pruebas tras el rediseño 7.1.1; dev server con proxy comprobado.

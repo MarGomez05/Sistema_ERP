@@ -11,12 +11,16 @@ import { AuthService } from '@core/auth/auth.service';
 import { ROLE_LABELS } from '@core/auth/auth.model';
 import { BadgeComponent, BadgeTone } from '@shared/ui/badge/badge.component';
 import { ButtonComponent } from '@shared/ui/button/button.component';
+import { BarChartComponent } from '@shared/ui/charts/bar-chart/bar-chart.component';
+import { ColumnChartComponent } from '@shared/ui/charts/column-chart/column-chart.component';
+import { DonutChartComponent } from '@shared/ui/charts/donut-chart/donut-chart.component';
 import { EmptyStateComponent } from '@shared/ui/empty-state/empty-state.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { PageHeaderComponent } from '@shared/ui/page-header/page-header.component';
 import { PaginationComponent } from '@shared/ui/pagination/pagination.component';
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { StatCardComponent } from '@shared/ui/stat-card/stat-card.component';
+import { StockBarItem } from '@shared/ui/charts/chart.model';
 import {
   DashboardSummary,
   ExpirationSeverity,
@@ -25,6 +29,7 @@ import {
 } from './dashboard.model';
 import { DashboardService } from './dashboard.service';
 import { PageResponse } from '@core/models/api.model';
+import { buildExpirationBuckets, buildLotDonut, buildStockBars } from './dashboard.charts';
 
 const LOW_STOCK_PAGE_SIZE = 10;
 
@@ -32,8 +37,11 @@ const LOW_STOCK_PAGE_SIZE = 10;
   selector: 'app-dashboard',
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
+    BarChartComponent,
     BadgeComponent,
     ButtonComponent,
+    ColumnChartComponent,
+    DonutChartComponent,
     EmptyStateComponent,
     IconComponent,
     PageHeaderComponent,
@@ -146,53 +154,96 @@ const LOW_STOCK_PAGE_SIZE = 10;
             />
           </section>
 
-          <!-- Composición de los lotes activos -->
-          <section class="panel health" aria-labelledby="health-title">
-            <div class="panel__header">
-              <div>
-                <h2 id="health-title" class="panel__title">Estado de los lotes activos</h2>
-                <p class="panel__subtitle">
-                  Distribución de los lotes con existencias disponibles.
-                </p>
-              </div>
-              @if (summary() !== null) {
-                <span class="health__total"> {{ summaryMetric('activeLots') }} lotes </span>
-              }
-            </div>
-
-            <div class="panel__body">
-              @if (summaryLoading() && summary() === null) {
-                <app-skeleton height="14px" radius="var(--radius-pill)" />
-                <app-skeleton width="60%" height="12px" />
-              } @else if (lotSegments().length === 0) {
-                <p class="health__empty">No hay lotes activos registrados para analizar.</p>
-              } @else {
-                <div class="health__bar" role="img" [attr.aria-label]="healthSummaryText()">
-                  @for (segment of lotSegments(); track segment.key) {
-                    <span
-                      class="health__segment"
-                      [class]="'health__segment health__segment--' + segment.tone"
-                      [style.width.%]="segment.percent"
-                    ></span>
-                  }
+          <section class="analytics" aria-label="Análisis del inventario">
+            <article class="panel analytics__panel" aria-labelledby="lots-health-title">
+              <div class="panel__header">
+                <div>
+                  <h2 id="lots-health-title" class="panel__title">Estado de los lotes activos</h2>
+                  <p class="panel__subtitle">
+                    Distribución de los lotes con existencias disponibles.
+                  </p>
                 </div>
+                @if (summary() !== null) {
+                  <app-badge tone="info">{{ summaryMetric('activeLots') }} lotes</app-badge>
+                }
+              </div>
 
-                <ul class="health__legend">
-                  @for (segment of lotSegments(); track segment.key) {
-                    <li class="health__legend-item">
-                      <span
-                        class="health__dot"
-                        [class]="'health__dot health__dot--' + segment.tone"
-                        aria-hidden="true"
-                      ></span>
-                      <span class="health__legend-label">{{ segment.label }}</span>
-                      <strong class="health__legend-value">{{ segment.count }}</strong>
-                      <span class="health__legend-percent">{{ segment.percentText }}</span>
-                    </li>
-                  }
-                </ul>
-              }
-            </div>
+              <div class="panel__body analytics__body">
+                @if (summaryLoading() && summary() === null) {
+                  <div class="chart-skeleton chart-skeleton--donut">
+                    <app-skeleton width="184px" height="184px" radius="50%" />
+                    <div class="chart-skeleton__legend">
+                      @for (row of skeletonRows; track $index) {
+                        <app-skeleton height="12px" />
+                      }
+                    </div>
+                  </div>
+                } @else if (donutSegments().length === 0) {
+                  <app-empty-state
+                    icon="database"
+                    title="Sin lotes activos"
+                    description="No hay lotes con existencias disponibles para analizar."
+                  />
+                } @else {
+                  <app-donut-chart
+                    [segments]="donutSegments()"
+                    [centerValue]="summaryMetric('activeLots')"
+                    centerCaption="lotes activos"
+                    [ariaLabel]="donutAriaLabel()"
+                  />
+                }
+              </div>
+            </article>
+
+            <article class="panel analytics__panel" aria-labelledby="expiration-chart-title">
+              <div class="panel__header">
+                <div>
+                  <h2 id="expiration-chart-title" class="panel__title">Vencimientos próximos</h2>
+                  <p class="panel__subtitle">
+                    Lotes vencidos y con vencimiento dentro de los próximos 30 días.
+                  </p>
+                </div>
+                @if (expirationTotal() > 0) {
+                  <app-badge tone="danger" [dot]="true">{{ expirationTotal() }} lotes</app-badge>
+                }
+              </div>
+
+              <div class="panel__body analytics__body">
+                @if (expiringError()) {
+                  <div class="inline-alert inline-alert--inline" role="alert">
+                    <app-icon name="alertCircle" [size]="18" />
+                    <p>{{ expiringError() }}</p>
+                    <button
+                      appButton
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      (click)="loadExpiringLots()"
+                    >
+                      Reintentar
+                    </button>
+                  </div>
+                } @else if (expiringLoading() && expiringLots().length === 0) {
+                  <div class="chart-skeleton chart-skeleton--columns">
+                    @for (row of skeletonColumns; track $index) {
+                      <app-skeleton [width]="row.width" [height]="row.height" />
+                    }
+                  </div>
+                } @else if (expiringLots().length === 0) {
+                  <app-empty-state
+                    icon="checkCircle"
+                    title="Sin vencimientos próximos"
+                    description="No hay lotes vencidos ni por vencer en los próximos 30 días."
+                  />
+                } @else {
+                  <app-column-chart
+                    [columns]="expirationBuckets()"
+                    [ariaLabel]="expirationAriaLabel()"
+                    caption="Cantidad de lotes por rango de días."
+                  />
+                }
+              </div>
+            </article>
           </section>
         }
       }
@@ -240,6 +291,10 @@ const LOW_STOCK_PAGE_SIZE = 10;
                 description="Todas las presentaciones activas tienen existencias suficientes."
               />
             } @else {
+              <div class="stock-chart">
+                <app-bar-chart [items]="stockBars()" />
+              </div>
+
               <div class="table-wrap">
                 <table class="table">
                   <thead>
@@ -412,6 +467,10 @@ const LOW_STOCK_PAGE_SIZE = 10;
       border-width: 0 0 1px;
     }
 
+    .inline-alert--inline {
+      margin: 0;
+    }
+
     .table-skeleton {
       display: grid;
       gap: 14px;
@@ -423,96 +482,63 @@ const LOW_STOCK_PAGE_SIZE = 10;
       font-weight: var(--weight-semibold);
     }
 
-    /* ---------- Salud de los lotes ---------- */
-    .health__total {
-      color: var(--text-muted);
-      font-size: var(--text-xs);
-      font-variant-numeric: tabular-nums;
-      font-weight: var(--weight-semibold);
+    /* ---------- Analítica del inventario ---------- */
+    .analytics {
+      display: grid;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      gap: var(--space-4);
+      margin-bottom: var(--space-5);
     }
 
-    .health__bar {
+    section.analytics__panel {
       display: flex;
-      gap: 4px;
+      flex-direction: column;
+      margin-bottom: 0;
+    }
+
+    .analytics__body {
+      display: flex;
+      flex: 1;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 328px;
+    }
+
+    .chart-skeleton {
       width: 100%;
-      height: 14px;
-      padding: 2px;
-      background: var(--surface-muted);
-      border-radius: var(--radius-pill);
-      overflow: hidden;
     }
 
-    .health__segment {
-      min-width: 3px;
-      border-radius: var(--radius-pill);
-      transition: width var(--transition-slow);
-    }
-
-    .health__segment--success {
-      background: var(--success-500);
-    }
-
-    .health__segment--warning {
-      background: var(--warning-500);
-    }
-
-    .health__segment--danger {
-      background: var(--danger-500);
-    }
-
-    .health__empty {
-      color: var(--text-muted);
-      font-size: var(--text-sm);
-    }
-
-    .health__legend {
+    .chart-skeleton--donut {
       display: flex;
       flex-wrap: wrap;
-      gap: 12px 32px;
-      margin: 18px 0 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    .health__legend-item {
-      display: flex;
       align-items: center;
-      gap: 8px;
-      font-size: var(--text-sm);
+      justify-content: center;
+      gap: 28px;
     }
 
-    .health__dot {
-      width: 9px;
-      height: 9px;
-      border-radius: 50%;
+    .chart-skeleton__legend {
+      display: grid;
+      flex: 1 1 200px;
+      gap: 14px;
+      max-width: 320px;
     }
 
-    .health__dot--success {
-      background: var(--success-500);
+    .chart-skeleton--columns {
+      display: flex;
+      align-items: flex-end;
+      gap: 12px;
+      padding: 8px 4px 0;
+      border-bottom: 1px solid var(--border);
     }
 
-    .health__dot--warning {
-      background: var(--warning-500);
+    .chart-skeleton--columns > * {
+      flex: 1 1 0;
+      min-width: 0;
     }
 
-    .health__dot--danger {
-      background: var(--danger-500);
-    }
-
-    .health__legend-label {
-      color: var(--text-muted);
-    }
-
-    .health__legend-value {
-      color: var(--text);
-      font-weight: var(--weight-semibold);
-      font-variant-numeric: tabular-nums;
-    }
-
-    .health__legend-percent {
-      color: var(--text-subtle);
-      font-size: var(--text-xs);
-      font-variant-numeric: tabular-nums;
+    .stock-chart {
+      padding: 22px 22px 8px;
+      border-bottom: 1px solid var(--border);
     }
 
     /* ---------- Bienvenida ---------- */
@@ -591,14 +617,24 @@ const LOW_STOCK_PAGE_SIZE = 10;
       flex: none;
     }
 
+    @media (max-width: 1080px) {
+      .analytics {
+        grid-template-columns: minmax(0, 1fr);
+      }
+
+      .analytics__body {
+        min-height: 0;
+      }
+    }
+
     @media (max-width: 640px) {
       .welcome {
         flex-direction: column;
         padding: 24px;
       }
 
-      .health__legend {
-        gap: 10px 20px;
+      .stock-chart {
+        padding: 18px 16px 6px;
       }
     }
   `,
@@ -699,30 +735,60 @@ export class DashboardComponent implements OnInit {
     () => this.lowStock()?.totalElements ?? this.summary()?.lowStockProducts ?? 0,
   );
 
-  protected readonly lotSegments = computed(() => {
-    const summary = this.summary();
+  // Gráficas: los cálculos viven en dashboard.charts.ts y aquí solo se formatean.
+  protected readonly donutSegments = computed(() => buildLotDonut(this.summary()));
 
-    if (summary === null || summary.activeLots === 0) {
-      return [];
+  protected readonly expirationBuckets = computed(() =>
+    buildExpirationBuckets(this.expiringLots()),
+  );
+
+  protected readonly expirationTotal = computed(() =>
+    this.expirationBuckets().reduce((total, bucket) => total + bucket.value, 0),
+  );
+
+  protected readonly stockBars = computed<StockBarItem[]>(() =>
+    buildStockBars(this.lowStockItems()).map((bar) => ({
+      ...bar,
+      currentLabel: this.formatQuantity(bar.current),
+      minimumLabel: this.formatQuantity(bar.minimum),
+      missingLabel: this.formatQuantity(bar.missing),
+    })),
+  );
+
+  protected readonly donutAriaLabel = computed(() => {
+    const segments = this.donutSegments();
+
+    if (segments.length === 0) {
+      return 'Sin lotes activos para analizar.';
     }
 
-    const total = summary.activeLots;
-    const expired = summary.expiredLots;
-    const expiring = summary.expiringLots;
-    const healthy = Math.max(total - expired - expiring, 0);
+    const detail = segments
+      .map((segment) => `${segment.label}: ${this.formatQuantity(segment.value)}`)
+      .join('. ');
 
-    return [
-      this.buildSegment('healthy', 'Sin alerta', healthy, total, 'success'),
-      this.buildSegment('expiring', 'Por vencer (30 días)', expiring, total, 'warning'),
-      this.buildSegment('expired', 'Vencidos', expired, total, 'danger'),
-    ];
+    return `Distribución de lotes activos. ${detail}.`;
   });
 
-  protected readonly healthSummaryText = computed(() =>
-    this.lotSegments()
-      .map((segment) => `${segment.label}: ${segment.count}`)
-      .join('. '),
-  );
+  protected readonly expirationAriaLabel = computed(() => {
+    const buckets = this.expirationBuckets();
+
+    if (this.expirationTotal() === 0) {
+      return 'Sin vencimientos próximos.';
+    }
+
+    const detail = buckets
+      .map((bucket) => `${bucket.label}: ${this.formatQuantity(bucket.value)}`)
+      .join('. ');
+
+    return `Lotes por rango de vencimiento. ${detail}.`;
+  });
+
+  protected readonly skeletonColumns = [
+    { width: '100%', height: '96px' },
+    { width: '100%', height: '140px' },
+    { width: '100%', height: '118px' },
+    { width: '100%', height: '164px' },
+  ];
 
   ngOnInit(): void {
     this.refresh();
@@ -845,24 +911,5 @@ export class DashboardComponent implements OnInit {
       default:
         return 'neutral';
     }
-  }
-
-  private buildSegment(
-    key: string,
-    label: string,
-    count: number,
-    total: number,
-    tone: 'success' | 'warning' | 'danger',
-  ) {
-    const percent = total === 0 ? 0 : (count / total) * 100;
-
-    return {
-      key,
-      label,
-      count,
-      tone,
-      percent,
-      percentText: `${Math.round(percent)}%`,
-    };
   }
 }
