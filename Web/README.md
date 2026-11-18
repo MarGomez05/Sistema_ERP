@@ -2,7 +2,7 @@
 
 Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre, en esta primera entrega, la **base del frontend**: autenticación real, layout, navegación por rol y panel general con datos del backend.
 
-> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 en progreso** (17/11/2026) con los módulos de **catálogos de inventario** y de **productos y presentaciones**. Precios, lotes, clientes, ventas y facturación se incorporan en los siguientes entregables.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 en progreso** (17/11/2026) con los módulos de **catálogos de inventario** y de **productos, presentaciones y precios**. Lotes, clientes, ventas y facturación se incorporan en los siguientes entregables.
 
 ---
 
@@ -146,7 +146,10 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - Cada tarjeta muestra existencia, stock mínimo, precio vigente, estado de stock y estado lógico; permite agregar, editar y activar/desactivar presentaciones con confirmación en línea.
 - El formulario de presentación edita código, stock mínimo, URL de imagen y texto alternativo, con vista previa y validación de `http(s)://` o ruta relativa iniciada en `/`. Como el `PUT` del backend reemplaza la imagen, el formulario siempre reenvía la URL vigente para no borrarla.
 - La subida de archivos no está implementada: la imagen se referencia por URL, tal como exige el contrato.
-- Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN` y `WAREHOUSE`. Los precios se muestran como lectura y su edición queda para el siguiente entregable de 7.2.
+- Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN` y `WAREHOUSE`. El catálogo de precios es exclusivo de `ADMIN`.
+- El cambio de precio se hace desde el detalle: cada presentación tiene la acción «Precio», que abre un panel con el precio vigente, el formulario del nuevo valor y el historial completo.
+- Guardar un precio cierra el vigente y registra el nuevo con el usuario del JWT; el panel se actualiza al instante y muestra cuál quedó vigente, con fecha de inicio, cierre y autor del cambio.
+- El historial se carga con `GET /api/products/{productId}/presentations/{presentationId}/prices` y el alta con `POST` sobre la misma ruta; ambos exigen rol `ADMIN`.
 - El listado no suma existencias entre presentaciones distintas: cada chip corresponde a una presentación con su propia unidad.
 - Si el backend rechaza una operación (código duplicado, presentación repetida, vencimiento con lotes activos, activación con catálogos inactivos), el mensaje del `400`/`409` se muestra en el formulario o en el toast.
 
@@ -172,6 +175,7 @@ Criterios aplicados:
 - Superficies claras, bordes suaves y sombras discretas.
 - Login editorial: panel de marca en degradado azul con corte diagonal, tarjeta de acceso que invade el límite y mini panel ilustrativo.
 - Colores pastel solo para fondos de estado (éxito, advertencia, peligro, información).
+- Botones con degradado de marca (`--gradient-brand`) de azul profundo a cian, borde degradado en secundarios, elevación sutil al pasar el cursor y anillo de foco accesible; la variante de peligro usa su propio degradado. Los controles de icono (header, paginación, cierre de paneles) comparten el mismo lenguaje visual en versión suave.
 - Tipografía **Inter** con fallback del sistema.
 - Animaciones sutiles (aparición, hover, transiciones) y respeto de `prefers-reduced-motion`.
 - Gráficas SVG/CSS propias con etiquetas accesibles y colores de estado; sin librerías de visualización.
@@ -245,7 +249,7 @@ La ruta del shell está protegida con `authGuard`; los módulos se cargan con `l
 ## 7. Componentes reutilizables
 
 - `IconComponent`: catálogo SVG propio, tamaño, grosor y etiqueta accesible.
-- `ButtonComponent` (`button[appButton]`, `a[appButton]`): variantes primaria, secundaria, fantasma y peligro; tamaños, bloque y estado de carga.
+- `ButtonComponent` (`button[appButton]`, `a[appButton]`): variantes primaria con degradado de marca, secundaria con borde degradado, fantasma, peligro con degradado propio; tamaños, bloque, estado de carga y foco visible.
 - `BadgeComponent`: tonos neutral, marca, éxito, advertencia, peligro e información; punto opcional.
 - `StatCardComponent`: KPI con icono, tono, pista y skeleton.
 - `SkeletonComponent`: placeholders de carga.
@@ -282,7 +286,7 @@ La suite incluye:
 - `auth.service.spec.ts`: mapeo de errores de login (401, 403, fallo de conexión, mensaje del backend y error genérico) y comportamiento del servicio de autenticación.
 - `dashboard.charts.spec.ts`: reparto de la dona de lotes, rangos de vencimiento, cálculo del faltante y casos límite con datos inconsistentes o vacíos.
 - `catalog.model.spec.ts`: configuración de los seis catálogos, filtros por relación, payloads de creación/edición y formato de columnas.
-- `product.model.spec.ts`: payloads de producto y presentación (incluida la conservación de la imagen), formatos de cantidad y dinero, etiquetas de estado de stock, resumen de presentaciones visibles y conteo de imágenes pendientes.
+- `product.model.spec.ts`: payloads de producto y presentación (incluida la conservación de la imagen), payloads de precio, formatos de cantidad, dinero y fecha, etiquetas de estado de stock, resumen de presentaciones visibles y conteo de imágenes pendientes.
 
 El build de producción también valida plantillas estrictas y presupuestos de tamaño.
 
@@ -299,7 +303,7 @@ Salida: `dist/tamachihua-web/browser`.
 | Entregable | Alcance |
 |---|---|
 | **7.1 Base del frontend** | Proyecto, diseño, login, shell, guards, dashboard, 404 y documentación — **completado**; rediseño visual 7.1.1 con login asimétrico y gráficas propias — **completado** |
-| 7.2 Catálogos e inventario | Catálogos y productos con presentaciones — **completado**; precios y lotes — pendientes |
+| 7.2 Catálogos e inventario | Catálogos, productos con presentaciones y precios con historial — **completado**; lotes — pendientes |
 | 7.3 Clientes | Listado, filtros, detalle, creación, edición, estado y crédito |
 | 7.4 Ventas | Listado, nueva venta, detalle, confirmación y cancelación |
 | 7.5 Facturación | Emisión, detalle, pagos y notas de crédito |
@@ -311,8 +315,8 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
 ## 11. Limitaciones conocidas
 
-- Solo el panel general, los catálogos y los productos con sus presentaciones están implementados; los demás módulos se agregan por entregable.
-- El cambio de precio y la gestión de lotes aún no tienen interfaz; el detalle muestra el precio vigente y las existencias en modo lectura.
+- Solo el panel general, los catálogos, los productos con sus presentaciones y los precios están implementados; los demás módulos se agregan por entregable.
+- La gestión de lotes aún no tiene interfaz; el detalle muestra las existencias en modo lectura.
 - La imagen de cada presentación se referencia por URL: no hay subida de archivos ni almacenamiento binario en el cliente.
 - No hay entorno de producción ni pipeline de despliegue del frontend todavía.
 - En producción se requiere un proxy inverso que enrute `/api` al backend y sirva el `index.html` para las rutas del router.

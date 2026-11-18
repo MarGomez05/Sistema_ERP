@@ -466,6 +466,7 @@ Web/
 - Tipos TypeScript espejo de los DTO del backend; prohibido `any`.
 - Rutas protegidas por rol; el backend sigue siendo la autoridad.
 - Formularios reactivos con validaciones alineadas al backend.
+- Botones con degradado de marca y elevación sutil; la jerarquía se mantiene (primaria, secundaria, fantasma, peligro) y nunca se depende solo del color.
 - UI en español.
 
 ### 9.3 Pantallas iniciales
@@ -529,6 +530,20 @@ Implementado el 17/11/2026 (segunda parte del entregable 7.2):
 - Iconos SVG añadidos: `image` y `arrowLeft`. Pruebas nuevas en `features/products/product.model.spec.ts`.
 - Verificación: `npm run build` en verde (inicial 309.80 kB) y `npm test -- --watch=false` con 40 pruebas en verde.
 - Pendiente del entregable 7.2: cambio de precio, historial de precios y lotes.
+
+### 9.8 Entregable 7.2 — Precios e historial y rediseño de botones
+
+Implementado el 17/11/2026 (tercera parte del entregable 7.2):
+
+- Precios por presentación: `GET` y `POST /api/products/{productId}/presentations/{presentationId}/prices`, exclusivos de `ADMIN` según `SecurityConfig`.
+- Panel `product-price-panel` dentro del detalle del producto: precio vigente, formulario del nuevo valor e historial con fecha de inicio, cierre, autor y estado «Vigente»/«Cerrado».
+- El precio se valida como obligatorio, mayor que 0 y con hasta 8 enteros y 2 decimales; se redondea con `HALF_UP` a 2 decimales antes de enviarlo. Al guardar, el backend cierra el precio anterior y registra el nuevo con el usuario del JWT; el panel recarga el detalle y el historial sin cerrarse.
+- La acción «Precio» solo se muestra a `ADMIN`; los demás roles consultan el precio vigente en modo lectura.
+- Corrección del sistema de botones: la variante primaria no recibía la clase `app-button--primary`. Se añadió y se rediseñó con degradados de marca (azul profundo → cian), borde degradado en secundarios, degradado propio en peligro, elevación al pasar el cursor, anillo de foco y soporte de `prefers-reduced-motion`.
+- Nuevos tokens reutilizables: `--gradient-brand`, `--gradient-soft`, `--gradient-danger`, `--shadow-brand` y `--shadow-brand-strong`. La estética suave se aplica también en header, paginación, cierre de paneles y enlace activo del sidebar.
+- Pruebas nuevas en `product.model.spec.ts` para payloads de precio, detección de precio vigente y formato de fechas del historial.
+- Verificación: `npm run build` en verde (inicial 310.58 kB) y `npm test -- --watch=false` con 44 pruebas en verde.
+- Pendiente del entregable 7.2: lotes (ingreso, consulta, corrección de cantidad y último costo).
 
 ## 10. Testing y CI/CD
 
@@ -630,7 +645,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos y productos con presentaciones completados (17/11/2026); precios y lotes de 7.2 y los entregables 7.3–7.6 pendientes |
+| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones y precios con historial completados (17/11/2026); lotes de 7.2 y los entregables 7.3–7.6 pendientes |
 | 8 | Reportes | Pendiente |
 | 9 | Endurecimiento | Pendiente |
 

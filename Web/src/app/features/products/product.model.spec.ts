@@ -4,9 +4,12 @@ import {
   ProductListItem,
   ProductPresentation,
   ProductPresentationFormValue,
+  ProductPriceHistoryItem,
+  formatDateTime,
   formatMoney,
   formatQuantity,
   hiddenStockCount,
+  isCurrentPrice,
   pendingImages,
   presentationOptionLabel,
   productModelLabel,
@@ -14,6 +17,7 @@ import {
   stockStatusTone,
   toPresentationCreatePayload,
   toPresentationUpdatePayload,
+  toPricePayload,
   toProductPayload,
   visibleStock,
 } from './product.model';
@@ -225,5 +229,38 @@ describe('pendingImages', () => {
 
   it('devuelve cero cuando no hay presentaciones', () => {
     expect(pendingImages([])).toBe(0);
+  });
+});
+
+describe('precios', () => {
+  const currentPrice: ProductPriceHistoryItem = {
+    id: 10,
+    price: 19.75,
+    startDate: '2026-11-17T09:30:00',
+    endDate: null,
+    changedBy: { id: 2, fullName: 'Marvin Gómez' },
+  };
+
+  it('envía el precio tal cual lo captura el formulario', () => {
+    expect(toPricePayload({ price: 19.75 })).toEqual({ price: 19.75 });
+  });
+
+  it('usa cero si el valor no está definido', () => {
+    expect(toPricePayload({ price: null })).toEqual({ price: 0 });
+  });
+
+  it('marca como vigente solo el precio sin fecha de cierre', () => {
+    expect(isCurrentPrice(currentPrice)).toBe(true);
+    expect(isCurrentPrice({ ...currentPrice, endDate: '2026-11-18T08:00:00' })).toBe(false);
+  });
+
+  it('formatea fechas del historial y tolera valores vacíos o inválidos', () => {
+    const formatted = formatDateTime(currentPrice.startDate);
+
+    expect(formatted).not.toBe('—');
+    expect(formatted).toContain('2026');
+    expect(formatDateTime(null)).toBe('—');
+    expect(formatDateTime('   ')).toBe('—');
+    expect(formatDateTime('no-es-fecha')).toBe('—');
   });
 });

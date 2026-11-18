@@ -155,8 +155,8 @@ import { NAV_SECTIONS, NavItem } from '../nav.config';
     }
 
     .sidebar__collapse:hover {
-      background: var(--surface-hover);
-      border-color: var(--border);
+      background: var(--gradient-soft);
+      border-color: var(--brand-200);
       color: var(--brand-600);
     }
 
@@ -206,7 +206,7 @@ import { NAV_SECTIONS, NavItem } from '../nav.config';
     }
 
     .sidebar__link--active {
-      background: var(--brand-50);
+      background: var(--gradient-soft);
       color: var(--brand-700);
       font-weight: var(--weight-semibold);
     }

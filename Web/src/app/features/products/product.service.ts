@@ -12,10 +12,13 @@ import {
   ProductPresentation,
   ProductPresentationFormValue,
   ProductPresentationOption,
+  ProductPriceHistoryItem,
   ProductQuery,
   ProductSelectOption,
+  PriceFormValue,
   toPresentationCreatePayload,
   toPresentationUpdatePayload,
+  toPricePayload,
   toProductPayload,
 } from './product.model';
 
@@ -158,5 +161,27 @@ export class ProductService {
       `${this.productsUrl}/${productId}/presentations/${presentationId}/status`,
       { isActive },
     );
+  }
+
+  getPriceHistory(
+    productId: number,
+    presentationId: number,
+  ): Observable<ProductPriceHistoryItem[]> {
+    return this.http.get<ProductPriceHistoryItem[]>(this.pricesUrl(productId, presentationId));
+  }
+
+  changePrice(
+    productId: number,
+    presentationId: number,
+    value: PriceFormValue,
+  ): Observable<ProductPriceHistoryItem> {
+    return this.http.post<ProductPriceHistoryItem>(
+      this.pricesUrl(productId, presentationId),
+      toPricePayload(value),
+    );
+  }
+
+  private pricesUrl(productId: number, presentationId: number): string {
+    return `${this.productsUrl}/${productId}/presentations/${presentationId}/prices`;
   }
 }
