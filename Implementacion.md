@@ -434,7 +434,7 @@ Reglas:
 
 ## 9. Frontend Angular
 
-> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, clientes, ventas y facturación se agregan en las fases 7.2 a 7.5 sobre esta base.
+> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, productos, precios, lotes, clientes y ventas de los entregables 7.2, 7.3 y 7.4 están completos; facturación se agrega en la fase 7.5 sobre esta base.
 
 ### 9.1 Ubicación
 
@@ -448,6 +448,9 @@ Web/
 │       ├── auth/        # login
 │       ├── catalogs/    # catálogos de inventario
 │       ├── products/    # listado, detalle, presentaciones y formularios
+│       ├── lots/        # consulta de lotes, ingreso y corrección de cantidad
+│       ├── customers/   # listado, detalle, alta, edición, estado y crédito
+│       ├── sales/       # listado, editor, detalle, confirmación y cancelación
 │       ├── dashboard/   # panel general por rol
 │       └── errors/      # 404
 ├── src/styles/          # tokens, base, componentes y utilidades SCSS
@@ -539,11 +542,58 @@ Implementado el 17/11/2026 (tercera parte del entregable 7.2):
 - Panel `product-price-panel` dentro del detalle del producto: precio vigente, formulario del nuevo valor e historial con fecha de inicio, cierre, autor y estado «Vigente»/«Cerrado».
 - El precio se valida como obligatorio, mayor que 0 y con hasta 8 enteros y 2 decimales; se redondea con `HALF_UP` a 2 decimales antes de enviarlo. Al guardar, el backend cierra el precio anterior y registra el nuevo con el usuario del JWT; el panel recarga el detalle y el historial sin cerrarse.
 - La acción «Precio» solo se muestra a `ADMIN`; los demás roles consultan el precio vigente en modo lectura.
-- Corrección del sistema de botones: la variante primaria no recibía la clase `app-button--primary`. Se añadió y se rediseñó con degradados de marca (azul profundo → cian), borde degradado en secundarios, degradado propio en peligro, elevación al pasar el cursor, anillo de foco y soporte de `prefers-reduced-motion`.
+- Corrección del sistema de botones: la variante primaria no recibía la clase `app-button--primary` y la encapsulación emulada compilaba las reglas con `[_ngcontent]`, sin coincidir con el host `<button appButton>`. Los estilos se movieron a `src/styles/components.scss`; `app-badge` presentaba el mismo defecto y también se corrigió. Se rediseñaron con degradados de marca (azul profundo → cian), borde degradado en secundarios, degradado propio en peligro, elevación al pasar el cursor, anillo de foco y soporte de `prefers-reduced-motion`.
 - Nuevos tokens reutilizables: `--gradient-brand`, `--gradient-soft`, `--gradient-danger`, `--shadow-brand` y `--shadow-brand-strong`. La estética suave se aplica también en header, paginación, cierre de paneles y enlace activo del sidebar.
 - Pruebas nuevas en `product.model.spec.ts` para payloads de precio, detección de precio vigente y formato de fechas del historial.
 - Verificación: `npm run build` en verde (inicial 310.58 kB) y `npm test -- --watch=false` con 44 pruebas en verde.
 - Pendiente del entregable 7.2: lotes (ingreso, consulta, corrección de cantidad y último costo).
+
+### 9.9 Entregable 7.2 — Lotes
+
+Implementado el 17/11/2026 (cuarta y última parte del entregable 7.2):
+
+- Ruta `/lots` (`LOTS_ROUTES`) con `roleGuard` para `ADMIN`, `WAREHOUSE` y `PURCHASING`, entrada «Lotes» en la sección Inventario y acción «Ver lotes» desde el detalle de producto con `?productId=`.
+- Listado paginado con `GET /api/lots`: búsqueda por factura, filtro por proveedor, casilla «Solo con existencia» y filtro por producto como chip removible; el `productId` se sincroniza con la URL para compartir o recargar la consulta.
+- Tabla con producto y presentación, número de lote, proveedor, factura y fecha, ingreso, vencimiento con insignia de severidad (`EXPIRED`, `RED`, `YELLOW`, `NONE`) más días restantes, disponible frente a recibido y columnas de costo unitario y total solo para `ADMIN`/`PURCHASING`.
+- Alta en panel lateral (`lot-form`): búsqueda de producto activo, presentación, proveedor, factura con fecha no futura, número de lote, cantidad recibida > 0, costo unitario ≥ 0, vencimiento y notas ≤ 200. El vencimiento es obligatorio cuando el producto lo exige y siempre debe ser posterior al ingreso.
+- Último costo por presentación con `GET /api/products/{id}/last-cost`: se muestra como referencia, se sugiere al elegir presentación si el costo está vacío y se aplica con un clic.
+- Corrección de cantidad con `PATCH /api/lots/{id}/available-quantity`, validando que no sea negativa ni supere la cantidad recibida.
+- Permisos coherentes con `SecurityConfig`: lectura para los tres roles, corrección para `ADMIN`/`WAREHOUSE` y alta solo `ADMIN` porque `/api/suppliers/options` está restringido a `ADMIN`/`PURCHASING`. `WAREHOUSE` ve una nota explicativa; `PURCHASING` consulta con costos en modo lectura.
+- `lot.model.ts` centraliza el payload (recorte de textos y redondeo a 2 decimales), la lectura de fechas ISO como locales sin desfase, las severidades y sus tonos, las etiquetas de días, cantidades y costos, y la búsqueda del último costo por presentación.
+- Pruebas nuevas en `lot.model.spec.ts` (payload, fechas, severidad, etiquetas y último costo). Verificación: `npm run build` en verde (inicial 314.38 kB) y `npm test -- --watch=false` con 58 pruebas en verde.
+- Entregable 7.2 completado. Siguiente: entregable 7.3 (clientes).
+
+### 9.10 Entregable 7.3 — Clientes
+
+Implementado el 17/11/2026:
+
+- Rutas `/customers` y `/customers/:id` (`CUSTOMERS_ROUTES`) protegidas con `roleGuard` para `ADMIN`, `PURCHASING` y `SELLER`, con sección «Comercial» en la navegación.
+- Listado con `GET /api/customers`: búsqueda por nombre, documento, NIT o correo; filtros `documentType` e `isActive`; paginación y contador. Cada fila resume cliente, documento, contacto, crédito, saldo y estado.
+- Alta y edición con `POST` y `PUT /api/customers` en panel lateral: datos generales, documentos (tipo, número, NIT, NRC, DUI) y contacto. Validaciones espejo de longitudes, correo y teléfono; los conflictos de unicidad (documento, NIT, NRC, DUI o correo) se muestran con el mensaje del backend.
+- El detalle concentra información fiscal y de contacto, fechas de registro/actualización, y una tarjeta de crédito con límite, días, saldo pendiente, disponible y barra de uso calculada con `outstandingBalance`.
+- `PATCH /{id}/status` con confirmación en línea y `PATCH /{id}/credit` desde un panel propio, con aviso cuando el nuevo límite queda por debajo del saldo pendiente.
+- Permisos según `SecurityConfig`: lectura para los tres roles; alta y edición `ADMIN`/`SELLER`; estado y crédito solo `ADMIN`. `PURCHASING` opera en modo lectura.
+- Al crear se envía crédito en cero y el ajuste posterior lo realiza `ADMIN` desde el detalle.
+- `customer.model.ts` centraliza payloads (recorte, vacíos a `null`, crédito normalizado), etiquetas de tipo/documento, documento principal y cálculos de disponible, porcentaje de uso, tono y estado del crédito.
+- Iconos SVG propios nuevos: `creditCard`, `phone`, `mail`, `mapPin`, `idCard`.
+- Pruebas nuevas en `customer.model.spec.ts`. Verificación: `npm run build` en verde (inicial 315.28 kB) y `npm test -- --watch=false` con 72 pruebas en verde.
+- Entregable 7.3 completado. Siguiente: entregable 7.4 (ventas).
+
+### 9.11 Entregable 7.4 — Ventas
+
+Implementado el 17/11/2026:
+
+- Rutas `/sales`, `/sales/new`, `/sales/:id` y `/sales/:id/edit` (`SALES_ROUTES`) con `roleGuard`; el editor queda para `ADMIN` y `SELLER` y el listado/detalle para los cuatro roles. Sección «Comercial» ampliada con «Ventas».
+- Listado con `GET /api/sales`: filtros `from`, `to`, `customerId` y `status`; paginación y contador. `SELLER` solo ve sus propias ventas por la visibilidad que aplica el backend.
+- Editor de página completa para crear y editar ventas en `DRAFT`: cliente opcional (consumidor final), condición contado/crédito, método de pago, notas y líneas por presentación.
+- Búsqueda de productos activos con `GET /api/products`; el detalle del producto (`GET /api/products/{id}`) aporta presentaciones, precio vigente y stock. Cada presentación agregada se edita en cantidad, precio y descuento; se evita duplicarla y se validan importes y descuento.
+- Totales estimados en vivo (total y descuentos) y aviso de que el servidor recalcula base e IVA. Para crédito se muestra límite, saldo, disponible y días del cliente, con advertencia si la venta supera el disponible o faltan días.
+- Detalle con cliente, vendedor, condiciones, notas, líneas con IVA y totales, además del saldo pendiente y los datos de cancelación.
+- Confirmación con `POST /api/sales/{id}/confirm` (asignación FEFO) y cancelación con `POST /api/sales/{id}/cancel` y motivo opcional; solo `ADMIN` cancela. Los errores de stock, crédito o factura emitida muestran el mensaje del backend.
+- Permisos según `SecurityConfig`: lectura de los cuatro roles; crear, editar y confirmar `ADMIN`/`SELLER` (el vendedor solo sobre sus ventas); cancelar solo `ADMIN`.
+- `sale.model.ts` centraliza payloads (recorte, redondeo), totales, etiquetas, saldo pendiente, permisos y la validación visual del crédito. `CustomerService.findOptions()` expone el catálogo de clientes para los combos.
+- Pruebas nuevas en `sale.model.spec.ts` (15). Verificación: `npm run build` en verde (inicial 315.52 kB) y `npm test -- --watch=false` con 87 pruebas en verde.
+- Entregable 7.4 completado. Siguiente: entregable 7.5 (facturación).
 
 ## 10. Testing y CI/CD
 
@@ -645,7 +695,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones y precios con historial completados (17/11/2026); lotes de 7.2 y los entregables 7.3–7.6 pendientes |
+| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones, precios con historial y lotes completados (17/11/2026); 7.3 clientes completado (17/11/2026); 7.4 ventas completado (17/11/2026); entregables 7.5–7.6 pendientes |
 | 8 | Reportes | Pendiente |
 | 9 | Endurecimiento | Pendiente |
 

@@ -1,8 +1,8 @@
 # TAMACHIHUA ERP · Cliente web Angular
 
-Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre, en esta primera entrega, la **base del frontend**: autenticación real, layout, navegación por rol y panel general con datos del backend.
+Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre autenticación, layout, navegación por rol, panel general, catálogos e inventario, clientes y ventas con confirmación FEFO y cancelación.
 
-> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 en progreso** (17/11/2026) con los módulos de **catálogos de inventario** y de **productos, presentaciones y precios**. Lotes, clientes, ventas y facturación se incorporan en los siguientes entregables.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**. Facturación y reportes se incorporan en los siguientes entregables.
 
 ---
 
@@ -74,7 +74,7 @@ npx ng serve --port 4300      # puerto alternativo
 
 ---
 
-## 3. Funcionalidad entregada (Fase 7.1)
+## 3. Funcionalidad entregada
 
 ### Autenticación
 
@@ -128,7 +128,7 @@ Estados cubiertos: carga con skeletons, error con reintento por sección, listas
 
 Ruta comodín con identidad de marca y accesos al panel o al login según el estado de sesión.
 
-### Catálogos de inventario (7.2 en progreso)
+### Catálogos de inventario (7.2 completado)
 
 - Página única `/catalogs` con pestañas accesibles para categorías, tipos de producto, marcas, modelos, unidades de medida y presentaciones.
 - Listado paginado con búsqueda, filtro por estado y filtro por marca o unidad de medida según el catálogo.
@@ -137,7 +137,7 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN`.
 - Configuración declarativa en `catalog.model.ts` (`CATALOGS`, `toPayload`, `columnValue`) para no duplicar los seis listados.
 
-### Productos y presentaciones (7.2 en progreso)
+### Productos y presentaciones (7.2 completado)
 
 - Listado `/products` con búsqueda por nombre o código, filtros por categoría, tipo y estado, paginación y existencias por presentación en chips con color según `stockStatus`.
 - Alta y edición de producto en panel lateral: código, nombre, descripción, categoría, tipo, modelo opcional y bandera de vencimiento. El formulario conserva las opciones actuales aunque estén inactivas para no perder la referencia al editar.
@@ -152,6 +152,44 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - El historial se carga con `GET /api/products/{productId}/presentations/{presentationId}/prices` y el alta con `POST` sobre la misma ruta; ambos exigen rol `ADMIN`.
 - El listado no suma existencias entre presentaciones distintas: cada chip corresponde a una presentación con su propia unidad.
 - Si el backend rechaza una operación (código duplicado, presentación repetida, vencimiento con lotes activos, activación con catálogos inactivos), el mensaje del `400`/`409` se muestra en el formulario o en el toast.
+
+### Lotes (7.2 completado)
+
+- Página `/lots` con búsqueda por número de factura, filtro por proveedor (solo `ADMIN` y `PURCHASING`), casilla «Solo con existencia» y filtro por producto mediante `?productId=`, que se muestra como chip removible y se sincroniza con la URL para compartir la consulta.
+- Tabla ordenada por vencimiento con producto, presentación, lote, proveedor, factura, fecha de ingreso, vencimiento con severidad (`EXPIRED`, `RED`, `YELLOW`, `NONE`), cantidad disponible frente a la recibida y costos cuando el perfil puede verlos.
+- La columna de vencimiento combina la insignia de severidad con la fecha y la etiqueta de días restantes («Vence en 16 días», «Vencido hace 7 días», «Sin vencimiento»).
+- Alta de ingreso en panel lateral: búsqueda de producto activo, selección de presentación, proveedor, factura y fecha (no futura), número de lote, cantidad recibida, costo unitario, vencimiento y notas. El vencimiento se vuelve obligatorio cuando el producto lo requiere y siempre debe ser posterior al ingreso.
+- El último costo por presentación (`GET /api/products/{id}/last-cost`) se muestra como referencia y se puede aplicar con un clic; el costo se sugiere al elegir la presentación si el campo está vacío.
+- Corrección de cantidad disponible desde el mismo listado con `PATCH /api/lots/{id}/available-quantity`; valida que no sea negativa ni supere la cantidad recibida.
+- Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; la corrección de cantidad es para `ADMIN` y `WAREHOUSE`. El alta queda limitada a `ADMIN` porque requiere el catálogo de proveedores, restringido a `ADMIN` y `PURCHASING`; `PURCHASING` ve el listado con costos en modo lectura.
+- El detalle de producto enlaza a `/lots?productId=` con la acción «Ver lotes».
+- `lot.model.ts` centraliza el mapeo al payload, la interpretación de fechas ISO como fechas locales sin desfase de zona horaria y las etiquetas de severidad, días, cantidades y costos.
+
+### Clientes (7.3 completado)
+
+- Listado `/customers` con búsqueda por nombre, documento, NIT o correo; filtros por tipo de documento y estado; paginación y contador de resultados.
+- Cada fila muestra nombre legal y comercial, documento principal, teléfono/correo, línea de crédito, saldo pendiente con color según el uso del crédito y estado lógico.
+- Alta y edición en panel lateral con datos generales, documentos (tipo, número, NIT, NRC, DUI) y contacto (teléfono, correo, dirección). Las validaciones replican el contrato: longitudes, correo, teléfono y unicidad reportada por el backend.
+- El alta navega al detalle del cliente recién creado; la edición conserva las condiciones de crédito vigentes para no reiniciarlas.
+- Detalle `/customers/:id` con datos fiscales y de contacto, fechas de registro/actualización, tarjeta de crédito con límite, días, saldo pendiente, disponible y barra de uso.
+- `ADMIN` puede ajustar crédito (límite y días) desde un panel propio, con aviso si el nuevo límite queda por debajo del saldo pendiente, y activar/desactivar el cliente con confirmación en línea.
+- Lectura para `ADMIN`, `PURCHASING` y `SELLER`; creación y edición para `ADMIN` y `SELLER`; estado y crédito solo `ADMIN`, coherente con `SecurityConfig`.
+- Al crear se envía una línea de crédito en cero; el ajuste posterior queda reservado a `ADMIN`.
+- `customer.model.ts` centraliza payloads con recorte de textos y conversión de vacíos a `null`, redondeo de crédito, etiquetas de tipo/documento y cálculos de uso, disponible, tono y estado del crédito.
+
+### Ventas (7.4 completado)
+
+- Listado `/sales` con filtros por rango de fechas, cliente y estado (`DRAFT`, `CONFIRMED`, `CANCELLED`), paginación y contador. `SELLER` solo ve sus propias ventas; el backend aplica esa visibilidad.
+- Cada fila muestra número y fecha, cliente, vendedor, condición de pago, total, estado lógico y accesos a detalle y edición cuando la venta está en borrador.
+- Editor `/sales/new` y `/sales/:id/edit` restringido a `ADMIN` y `SELLER`: cliente opcional (consumidor final), condición de pago contado/crédito, método de pago, notas y líneas por presentación.
+- La búsqueda de productos usa `GET /api/products` con solo activos; al elegir un producto se cargan sus presentaciones con precio vigente y stock, y se agrega la presentación como línea con cantidad, precio y descuento editables.
+- El resumen calcula el total y los descuentos en vivo; el servidor recalcula base imponible e IVA al guardar. La venta creada o editada queda en `DRAFT`.
+- Con un cliente seleccionado se muestra su límite, saldo y disponible; para ventas a crédito se advierte si no hay días configurados o si el total supera el crédito disponible (la validación definitiva ocurre al confirmar).
+- Detalle `/sales/:id` con cliente, vendedor, condiciones, notas, líneas con IVA y totales (subtotal, descuentos, IVA, total, pagado y saldo pendiente).
+- Confirmación en línea con `POST /api/sales/{id}/confirm`, que descuenta stock con FEFO; los errores de stock insuficiente o crédito se muestran con el mensaje del backend.
+- Cancelación con `POST /api/sales/{id}/cancel` en un panel con motivo opcional, solo para `ADMIN`; si existe factura emitida se muestra el conflicto reportado por el backend.
+- Lectura para los cuatro roles; crear, editar y confirmar para `ADMIN` y `SELLER` (cada vendedor sobre sus propias ventas), y cancelar solo `ADMIN`, conforme a `SecurityConfig`.
+- `sale.model.ts` centraliza payloads con recorte y redondeo, totales estimados, etiquetas de estado y pago, saldo pendiente, permisos por estado/propietario y la validación visual del crédito.
 
 ---
 
@@ -211,6 +249,9 @@ Web/
 │   │   │   ├── auth/login/
 │   │   │   ├── catalogs/      # configuración, servicio, pestañas, listado y formulario
 │   │   │   ├── products/      # modelo, servicio, listado, detalle y formularios
+│   │   │   ├── lots/          # modelo, servicio, listado, ingreso y corrección de cantidad
+│   │   │   ├── customers/     # modelo, servicio, listado, formularios y detalle
+│   │   │   ├── sales/         # modelo, servicio, listado, editor y detalle de venta
 │   │   │   ├── dashboard/
 │   │   │   └── errors/
 │   │   ├── app.config.ts
@@ -239,6 +280,13 @@ Alias de importación disponibles: `@core/*`, `@shared/*`, `@layout/*`, `@featur
 | `/catalogs` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Catálogos de inventario |
 | `/products` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Listado de productos |
 | `/products/:id` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Detalle y presentaciones del producto |
+| `/lots` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Consulta de lotes; alta solo `ADMIN` y corrección `ADMIN`/`WAREHOUSE` |
+| `/customers` | `ADMIN`, `PURCHASING`, `SELLER` | Listado de clientes; alta y edición `ADMIN`/`SELLER` |
+| `/customers/:id` | `ADMIN`, `PURCHASING`, `SELLER` | Detalle, crédito y estado del cliente |
+| `/sales` | `ADMIN`, `WAREHOUSE`, `PURCHASING`, `SELLER` | Listado de ventas; `SELLER` solo las propias |
+| `/sales/new` | `ADMIN`, `SELLER` | Nueva venta en borrador |
+| `/sales/:id` | `ADMIN`, `WAREHOUSE`, `PURCHASING`, `SELLER` | Detalle, confirmación y cancelación (`ADMIN`) |
+| `/sales/:id/edit` | `ADMIN`, `SELLER` | Edición de una venta en borrador |
 | `/` | Autenticados | Redirige a `/dashboard` |
 | `**` | Público | Página no encontrada |
 
@@ -287,6 +335,9 @@ La suite incluye:
 - `dashboard.charts.spec.ts`: reparto de la dona de lotes, rangos de vencimiento, cálculo del faltante y casos límite con datos inconsistentes o vacíos.
 - `catalog.model.spec.ts`: configuración de los seis catálogos, filtros por relación, payloads de creación/edición y formato de columnas.
 - `product.model.spec.ts`: payloads de producto y presentación (incluida la conservación de la imagen), payloads de precio, formatos de cantidad, dinero y fecha, etiquetas de estado de stock, resumen de presentaciones visibles y conteo de imágenes pendientes.
+- `lot.model.spec.ts`: payload de ingreso con recorte y redondeo, fechas locales sin desfase, severidad y tono de vencimiento, etiquetas de días (incluidos vencidos y sin fecha), cantidades y costos visibles u ocultos, y búsqueda del último costo por presentación.
+- `customer.model.spec.ts`: payload de cliente con recorte y conversión de vacíos a `null`, normalización del crédito, etiquetas de tipo y documento, documento principal, disponible y porcentaje de uso, tonos y estados del crédito, y formatos de límite y días.
+- `sale.model.spec.ts`: payload de venta con recorte y redondeo, cálculo de líneas y totales con descuento, etiquetas de estado y pago, saldo pendiente, permisos de edición/confirmación/cancelación por estado y propietario, y advertencias de crédito.
 
 El build de producción también valida plantillas estrictas y presupuestos de tamaño.
 
@@ -303,9 +354,9 @@ Salida: `dist/tamachihua-web/browser`.
 | Entregable | Alcance |
 |---|---|
 | **7.1 Base del frontend** | Proyecto, diseño, login, shell, guards, dashboard, 404 y documentación — **completado**; rediseño visual 7.1.1 con login asimétrico y gráficas propias — **completado** |
-| 7.2 Catálogos e inventario | Catálogos, productos con presentaciones y precios con historial — **completado**; lotes — pendientes |
-| 7.3 Clientes | Listado, filtros, detalle, creación, edición, estado y crédito |
-| 7.4 Ventas | Listado, nueva venta, detalle, confirmación y cancelación |
+| 7.2 Catálogos e inventario | Catálogos, productos con presentaciones, precios con historial y lotes — **completado** |
+| 7.3 Clientes | Listado, filtros, detalle, creación, edición, estado y crédito — **completado** |
+| 7.4 Ventas | Listado, nueva venta, detalle, confirmación y cancelación — **completado** |
 | 7.5 Facturación | Emisión, detalle, pagos y notas de crédito |
 | 7.6 Reportes | Consultas y exportaciones definidas en la Fase 8 del plan |
 
@@ -315,8 +366,15 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
 ## 11. Limitaciones conocidas
 
-- Solo el panel general, los catálogos, los productos con sus presentaciones y los precios están implementados; los demás módulos se agregan por entregable.
-- La gestión de lotes aún no tiene interfaz; el detalle muestra las existencias en modo lectura.
+- Solo el panel general, los catálogos, los productos con sus presentaciones y precios, los lotes, los clientes y las ventas están implementados; facturación y reportes se agregan por entregable.
+- El alta de lotes requiere el catálogo de proveedores, por lo que `WAREHOUSE` puede corregir cantidades pero no registrar ingresos desde la interfaz.
+- `PURCHASING` puede consultar lotes con costos y filtrar por proveedor, pero no registrar ingresos ni corregir cantidades.
+- Las condiciones de crédito y el estado de un cliente solo los modifica `ADMIN`; `SELLER` puede crear y editar los datos básicos, y al crear el cliente la línea de crédito queda en cero.
+- `PURCHASING` consulta clientes, saldo y crédito en modo lectura.
+- `SELLER` solo ve sus propias ventas; `WAREHOUSE` y `PURCHASING` consultan el historial completo sin crear, editar, confirmar ni cancelar. Cancelar una venta queda reservado a `ADMIN`.
+- El listado de ventas filtra por fechas, cliente y estado porque la API no expone búsqueda por número de venta.
+- La emisión de factura desde una venta confirmada y los pagos corresponden al entregable 7.5; el detalle solo muestra el saldo pendiente.
+- El filtro por cliente del listado de ventas y el alta requieren `/api/customers/options`, disponible para `ADMIN` y `SELLER`.
 - La imagen de cada presentación se referencia por URL: no hay subida de archivos ni almacenamiento binario en el cliente.
 - No hay entorno de producción ni pipeline de despliegue del frontend todavía.
 - En producción se requiere un proxy inverso que enrute `/api` al backend y sirva el `index.html` para las rutas del router.

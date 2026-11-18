@@ -43,6 +43,27 @@ export const routes: Routes = [
         loadChildren: () =>
           import('@features/products/products.routes').then((module) => module.PRODUCTS_ROUTES),
       },
+      {
+        path: 'lots',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'WAREHOUSE', 'PURCHASING'] },
+        loadChildren: () =>
+          import('@features/lots/lots.routes').then((module) => module.LOTS_ROUTES),
+      },
+      {
+        path: 'customers',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'PURCHASING', 'SELLER'] },
+        loadChildren: () =>
+          import('@features/customers/customers.routes').then((module) => module.CUSTOMERS_ROUTES),
+      },
+      {
+        path: 'sales',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'WAREHOUSE', 'PURCHASING', 'SELLER'] },
+        loadChildren: () =>
+          import('@features/sales/sales.routes').then((module) => module.SALES_ROUTES),
+      },
     ],
   },
   {
