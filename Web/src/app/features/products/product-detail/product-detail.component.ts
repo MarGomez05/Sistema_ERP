@@ -69,6 +69,16 @@ type DetailPanel = 'product' | 'presentation' | 'price';
         </button>
 
         @if (product(); as current) {
+          <a
+            appButton
+            variant="secondary"
+            [routerLink]="['/lots']"
+            [queryParams]="{ productId: current.id }"
+          >
+            <app-icon name="layers" [size]="16" />
+            Ver lotes
+          </a>
+
           @if (canWrite()) {
             @if (confirmingStatus()) {
               <span class="detail-confirm">¿Desactivar producto?</span>

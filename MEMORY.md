@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 17/11/2026.
-> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1** y **7.2 en progreso** con los módulos de **catálogos** (categorías, tipos, marcas, modelos, unidades y presentaciones), de **productos con sus presentaciones** y de **precios con historial**, más un sistema de botones con degradado de marca. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 44 pruebas en verde.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1** y **7.2 completado** con los módulos de **catálogos** (categorías, tipos, marcas, modelos, unidades y presentaciones), de **productos con sus presentaciones**, de **precios con historial** y de **lotes con corrección de cantidad**, más un sistema de botones con degradado de marca. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 58 pruebas en verde.
 
 ## 1. Resumen
 
@@ -173,10 +173,23 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Nuevo componente `product-price-panel` en el detalle: muestra el precio vigente en una tarjeta con degradado de marca, formulario del nuevo valor (obligatorio, > 0, máximo 8 enteros y 2 decimales, redondeo `HALF_UP` a 2 decimales) e historial con fecha de inicio, cierre, autor y estado «Vigente»/«Cerrado».
 - Al guardar, se cierra el precio vigente y el nuevo queda activo; el panel y el detalle se recargan para reflejar el cambio sin cerrar el formulario. Los errores 400/409 del backend se muestran con `readApiError`.
 - La acción «Precio» solo aparece para `ADMIN`; `WAREHOUSE` y `PURCHASING` siguen viendo el precio vigente en modo lectura.
-- Se corrigió un defecto del sistema de botones: la variante primaria nunca recibía `app-button--primary`, por lo que los CTA se veían sin relleno.
+- Se corrigió un defecto del sistema de botones: la variante primaria nunca recibía `app-button--primary` y, además, la encapsulación emulada de Angular compilaba las reglas con `[_ngcontent]`, que no coincide con el elemento anfitrión (`<button appButton>`). Los estilos se movieron a `src/styles/components.scss`; `app-badge` tenía el mismo problema y también se corrigió.
 - Rediseño de botones: tokens `--gradient-brand`, `--gradient-soft`, `--gradient-danger`, `--shadow-brand` y `--shadow-brand-strong`; primaria con degradado azul→cian que se desplaza al pasar el cursor, secundaria con borde degradado, peligro con degradado propio, elevación sutil, anillo de foco y respeto de `prefers-reduced-motion`. Header, paginación, cierre de paneles y enlace activo del sidebar usan el lenguaje suave del degradado.
 - Verificación: `npm run build` en verde (inicial 310.58 kB) y `npm test -- --watch=false` con 44 pruebas en verde.
 - Pendiente del entregable 7.2: lotes (ingreso, consulta, corrección de cantidad y último costo).
+
+### Avance 17/11/2026 — Fase 7.2 (Lotes)
+
+- Nuevo módulo `/lots` con rutas propias (`LOTS_ROUTES`), entrada «Lotes» en la sección Inventario y acceso «Ver lotes» desde el detalle de producto con `?productId=`.
+- Listado con filtros de factura, proveedor (solo `ADMIN`/`PURCHASING`), «Solo con existencia» y producto; el filtro de producto se muestra como chip removible y se sincroniza con la URL para conservar la consulta al recargar.
+- Tabla con producto, presentación, lote, proveedor, factura, ingreso, vencimiento con insignia de severidad y días restantes, disponible frente a recibido y costos cuando el perfil puede verlos.
+- Alta de ingreso en panel lateral (`lot-form`): búsqueda de producto activo, presentación, proveedor, factura y fecha no futura, número de lote único, cantidad recibida, costo unitario, vencimiento y notas. El vencimiento es obligatorio si el producto lo requiere y siempre posterior al ingreso.
+- El último costo por presentación se consulta con `GET /api/products/{id}/last-cost`, se muestra como referencia y se aplica con un clic; al elegir presentación se sugiere si el costo está vacío.
+- Corrección de cantidad con `PATCH /api/lots/{id}/available-quantity`, validando que no sea negativa ni supere la cantidad recibida.
+- Permisos reales: lectura `ADMIN`/`WAREHOUSE`/`PURCHASING`; corrección de cantidad `ADMIN`/`WAREHOUSE`; alta solo `ADMIN` porque los proveedores están restringidos a `ADMIN`/`PURCHASING`. `WAREHOUSE` ve una nota explicativa y `PURCHASING` consulta con costos en modo lectura.
+- `lot.model.ts` centraliza modelos, payload con recorte y redondeo a 2 decimales, fechas ISO interpretadas como locales sin desfase, severidad/tono de vencimiento, etiquetas de días y costos, y búsqueda del último costo.
+- Verificación: `npm run build` en verde (inicial 314.38 kB) y `npm test -- --watch=false` con 58 pruebas en verde (14 nuevas de lotes).
+- Pendiente del entregable 7.2: ninguno. Siguiente: entregable 7.3 (clientes).
 
 ### Documentación completada en esta rama
 
@@ -216,6 +229,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-21 | Productos y sus presentaciones se gestionan en `/products` (listado) y `/products/:id` (detalle, presentaciones e imágenes por URL); la lectura es `ADMIN`/`WAREHOUSE`/`PURCHASING` y la escritura `ADMIN`/`WAREHOUSE`; el cambio de precio se reserva a `ADMIN` y queda para el siguiente entregable | Aplicada |
 | D-22 | El cambio de precio y su historial viven en el detalle del producto, en un panel por presentación; solo `ADMIN` ve la acción, el precio anterior se cierra al guardar y el historial muestra vigencia y autor | Aplicada |
 | D-23 | Los botones usan degradados de marca (`--gradient-brand`, `--gradient-soft`) con bordes redondeados, elevación al pasar el cursor y foco visible; la variante peligro conserva su propio degradado y los controles de icono usan la versión suave | Aplicada |
+| D-24 | Los lotes se consultan en `/lots` con filtros de factura, proveedor, existencia y producto; el alta vive en un panel lateral y la corrección de cantidad en otro. El alta queda para `ADMIN` porque requiere `/api/suppliers/options`; `WAREHOUSE` corrige cantidades y `PURCHASING` consulta con costos en modo lectura | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -367,7 +381,7 @@ npm test -- --watch=false
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Ejecutar la suite con Testcontainers cuando haya Docker disponible.
 - Configurar CI/CD.
-- Frontend: completar el entregable 7.2 (productos, presentaciones de producto, precios y lotes) y luego los entregables 7.3 a 7.6 (clientes, ventas, facturación y reportes) sobre la base ya creada en `Web/`.
+- Frontend: entregable 7.2 completado (catálogos, productos, presentaciones, precios con historial y lotes); continuar con los entregables 7.3 a 7.6 (clientes, ventas, facturación y reportes) sobre la base ya creada en `Web/`.
 - Frontend: validar visualmente el rediseño 7.1.1 en navegador con backend y credenciales reales; en el entorno de trabajo no estaban disponibles.
 - Frontend: definir estrategia de despliegue con proxy inverso para `/api`.
 - Regenerar diagramas de arquitectura y clases.

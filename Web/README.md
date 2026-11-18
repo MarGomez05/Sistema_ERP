@@ -2,7 +2,7 @@
 
 Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre, en esta primera entrega, la **base del frontend**: autenticación real, layout, navegación por rol y panel general con datos del backend.
 
-> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 en progreso** (17/11/2026) con los módulos de **catálogos de inventario** y de **productos, presentaciones y precios**. Lotes, clientes, ventas y facturación se incorporan en los siguientes entregables.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**. Clientes, ventas, facturación y reportes se incorporan en los siguientes entregables.
 
 ---
 
@@ -128,7 +128,7 @@ Estados cubiertos: carga con skeletons, error con reintento por sección, listas
 
 Ruta comodín con identidad de marca y accesos al panel o al login según el estado de sesión.
 
-### Catálogos de inventario (7.2 en progreso)
+### Catálogos de inventario (7.2 completado)
 
 - Página única `/catalogs` con pestañas accesibles para categorías, tipos de producto, marcas, modelos, unidades de medida y presentaciones.
 - Listado paginado con búsqueda, filtro por estado y filtro por marca o unidad de medida según el catálogo.
@@ -137,7 +137,7 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; escritura solo `ADMIN`.
 - Configuración declarativa en `catalog.model.ts` (`CATALOGS`, `toPayload`, `columnValue`) para no duplicar los seis listados.
 
-### Productos y presentaciones (7.2 en progreso)
+### Productos y presentaciones (7.2 completado)
 
 - Listado `/products` con búsqueda por nombre o código, filtros por categoría, tipo y estado, paginación y existencias por presentación en chips con color según `stockStatus`.
 - Alta y edición de producto en panel lateral: código, nombre, descripción, categoría, tipo, modelo opcional y bandera de vencimiento. El formulario conserva las opciones actuales aunque estén inactivas para no perder la referencia al editar.
@@ -152,6 +152,18 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - El historial se carga con `GET /api/products/{productId}/presentations/{presentationId}/prices` y el alta con `POST` sobre la misma ruta; ambos exigen rol `ADMIN`.
 - El listado no suma existencias entre presentaciones distintas: cada chip corresponde a una presentación con su propia unidad.
 - Si el backend rechaza una operación (código duplicado, presentación repetida, vencimiento con lotes activos, activación con catálogos inactivos), el mensaje del `400`/`409` se muestra en el formulario o en el toast.
+
+### Lotes (7.2 completado)
+
+- Página `/lots` con búsqueda por número de factura, filtro por proveedor (solo `ADMIN` y `PURCHASING`), casilla «Solo con existencia» y filtro por producto mediante `?productId=`, que se muestra como chip removible y se sincroniza con la URL para compartir la consulta.
+- Tabla ordenada por vencimiento con producto, presentación, lote, proveedor, factura, fecha de ingreso, vencimiento con severidad (`EXPIRED`, `RED`, `YELLOW`, `NONE`), cantidad disponible frente a la recibida y costos cuando el perfil puede verlos.
+- La columna de vencimiento combina la insignia de severidad con la fecha y la etiqueta de días restantes («Vence en 16 días», «Vencido hace 7 días», «Sin vencimiento»).
+- Alta de ingreso en panel lateral: búsqueda de producto activo, selección de presentación, proveedor, factura y fecha (no futura), número de lote, cantidad recibida, costo unitario, vencimiento y notas. El vencimiento se vuelve obligatorio cuando el producto lo requiere y siempre debe ser posterior al ingreso.
+- El último costo por presentación (`GET /api/products/{id}/last-cost`) se muestra como referencia y se puede aplicar con un clic; el costo se sugiere al elegir la presentación si el campo está vacío.
+- Corrección de cantidad disponible desde el mismo listado con `PATCH /api/lots/{id}/available-quantity`; valida que no sea negativa ni supere la cantidad recibida.
+- Lectura para `ADMIN`, `WAREHOUSE` y `PURCHASING`; la corrección de cantidad es para `ADMIN` y `WAREHOUSE`. El alta queda limitada a `ADMIN` porque requiere el catálogo de proveedores, restringido a `ADMIN` y `PURCHASING`; `PURCHASING` ve el listado con costos en modo lectura.
+- El detalle de producto enlaza a `/lots?productId=` con la acción «Ver lotes».
+- `lot.model.ts` centraliza el mapeo al payload, la interpretación de fechas ISO como fechas locales sin desfase de zona horaria y las etiquetas de severidad, días, cantidades y costos.
 
 ---
 
@@ -211,6 +223,7 @@ Web/
 │   │   │   ├── auth/login/
 │   │   │   ├── catalogs/      # configuración, servicio, pestañas, listado y formulario
 │   │   │   ├── products/      # modelo, servicio, listado, detalle y formularios
+│   │   │   ├── lots/          # modelo, servicio, listado, ingreso y corrección de cantidad
 │   │   │   ├── dashboard/
 │   │   │   └── errors/
 │   │   ├── app.config.ts
@@ -239,6 +252,7 @@ Alias de importación disponibles: `@core/*`, `@shared/*`, `@layout/*`, `@featur
 | `/catalogs` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Catálogos de inventario |
 | `/products` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Listado de productos |
 | `/products/:id` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Detalle y presentaciones del producto |
+| `/lots` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Consulta de lotes; alta solo `ADMIN` y corrección `ADMIN`/`WAREHOUSE` |
 | `/` | Autenticados | Redirige a `/dashboard` |
 | `**` | Público | Página no encontrada |
 
@@ -287,6 +301,7 @@ La suite incluye:
 - `dashboard.charts.spec.ts`: reparto de la dona de lotes, rangos de vencimiento, cálculo del faltante y casos límite con datos inconsistentes o vacíos.
 - `catalog.model.spec.ts`: configuración de los seis catálogos, filtros por relación, payloads de creación/edición y formato de columnas.
 - `product.model.spec.ts`: payloads de producto y presentación (incluida la conservación de la imagen), payloads de precio, formatos de cantidad, dinero y fecha, etiquetas de estado de stock, resumen de presentaciones visibles y conteo de imágenes pendientes.
+- `lot.model.spec.ts`: payload de ingreso con recorte y redondeo, fechas locales sin desfase, severidad y tono de vencimiento, etiquetas de días (incluidos vencidos y sin fecha), cantidades y costos visibles u ocultos, y búsqueda del último costo por presentación.
 
 El build de producción también valida plantillas estrictas y presupuestos de tamaño.
 
@@ -303,7 +318,7 @@ Salida: `dist/tamachihua-web/browser`.
 | Entregable | Alcance |
 |---|---|
 | **7.1 Base del frontend** | Proyecto, diseño, login, shell, guards, dashboard, 404 y documentación — **completado**; rediseño visual 7.1.1 con login asimétrico y gráficas propias — **completado** |
-| 7.2 Catálogos e inventario | Catálogos, productos con presentaciones y precios con historial — **completado**; lotes — pendientes |
+| 7.2 Catálogos e inventario | Catálogos, productos con presentaciones, precios con historial y lotes — **completado** |
 | 7.3 Clientes | Listado, filtros, detalle, creación, edición, estado y crédito |
 | 7.4 Ventas | Listado, nueva venta, detalle, confirmación y cancelación |
 | 7.5 Facturación | Emisión, detalle, pagos y notas de crédito |
@@ -315,8 +330,9 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
 ## 11. Limitaciones conocidas
 
-- Solo el panel general, los catálogos, los productos con sus presentaciones y los precios están implementados; los demás módulos se agregan por entregable.
-- La gestión de lotes aún no tiene interfaz; el detalle muestra las existencias en modo lectura.
+- Solo el panel general, los catálogos, los productos con sus presentaciones y precios y los lotes están implementados; los demás módulos se agregan por entregable.
+- El alta de lotes requiere el catálogo de proveedores, por lo que `WAREHOUSE` puede corregir cantidades pero no registrar ingresos desde la interfaz.
+- `PURCHASING` puede consultar lotes con costos y filtrar por proveedor, pero no registrar ingresos ni corregir cantidades.
 - La imagen de cada presentación se referencia por URL: no hay subida de archivos ni almacenamiento binario en el cliente.
 - No hay entorno de producción ni pipeline de despliegue del frontend todavía.
 - En producción se requiere un proxy inverso que enrute `/api` al backend y sirva el `index.html` para las rutas del router.

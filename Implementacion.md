@@ -434,7 +434,7 @@ Reglas:
 
 ## 9. Frontend Angular
 
-> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, clientes, ventas y facturación se agregan en las fases 7.2 a 7.5 sobre esta base.
+> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, productos, precios y lotes del entregable 7.2 están completos; clientes, ventas y facturación se agregan en las fases 7.3 a 7.5 sobre esta base.
 
 ### 9.1 Ubicación
 
@@ -448,6 +448,7 @@ Web/
 │       ├── auth/        # login
 │       ├── catalogs/    # catálogos de inventario
 │       ├── products/    # listado, detalle, presentaciones y formularios
+│       ├── lots/        # consulta de lotes, ingreso y corrección de cantidad
 │       ├── dashboard/   # panel general por rol
 │       └── errors/      # 404
 ├── src/styles/          # tokens, base, componentes y utilidades SCSS
@@ -539,11 +540,26 @@ Implementado el 17/11/2026 (tercera parte del entregable 7.2):
 - Panel `product-price-panel` dentro del detalle del producto: precio vigente, formulario del nuevo valor e historial con fecha de inicio, cierre, autor y estado «Vigente»/«Cerrado».
 - El precio se valida como obligatorio, mayor que 0 y con hasta 8 enteros y 2 decimales; se redondea con `HALF_UP` a 2 decimales antes de enviarlo. Al guardar, el backend cierra el precio anterior y registra el nuevo con el usuario del JWT; el panel recarga el detalle y el historial sin cerrarse.
 - La acción «Precio» solo se muestra a `ADMIN`; los demás roles consultan el precio vigente en modo lectura.
-- Corrección del sistema de botones: la variante primaria no recibía la clase `app-button--primary`. Se añadió y se rediseñó con degradados de marca (azul profundo → cian), borde degradado en secundarios, degradado propio en peligro, elevación al pasar el cursor, anillo de foco y soporte de `prefers-reduced-motion`.
+- Corrección del sistema de botones: la variante primaria no recibía la clase `app-button--primary` y la encapsulación emulada compilaba las reglas con `[_ngcontent]`, sin coincidir con el host `<button appButton>`. Los estilos se movieron a `src/styles/components.scss`; `app-badge` presentaba el mismo defecto y también se corrigió. Se rediseñaron con degradados de marca (azul profundo → cian), borde degradado en secundarios, degradado propio en peligro, elevación al pasar el cursor, anillo de foco y soporte de `prefers-reduced-motion`.
 - Nuevos tokens reutilizables: `--gradient-brand`, `--gradient-soft`, `--gradient-danger`, `--shadow-brand` y `--shadow-brand-strong`. La estética suave se aplica también en header, paginación, cierre de paneles y enlace activo del sidebar.
 - Pruebas nuevas en `product.model.spec.ts` para payloads de precio, detección de precio vigente y formato de fechas del historial.
 - Verificación: `npm run build` en verde (inicial 310.58 kB) y `npm test -- --watch=false` con 44 pruebas en verde.
 - Pendiente del entregable 7.2: lotes (ingreso, consulta, corrección de cantidad y último costo).
+
+### 9.9 Entregable 7.2 — Lotes
+
+Implementado el 17/11/2026 (cuarta y última parte del entregable 7.2):
+
+- Ruta `/lots` (`LOTS_ROUTES`) con `roleGuard` para `ADMIN`, `WAREHOUSE` y `PURCHASING`, entrada «Lotes» en la sección Inventario y acción «Ver lotes» desde el detalle de producto con `?productId=`.
+- Listado paginado con `GET /api/lots`: búsqueda por factura, filtro por proveedor, casilla «Solo con existencia» y filtro por producto como chip removible; el `productId` se sincroniza con la URL para compartir o recargar la consulta.
+- Tabla con producto y presentación, número de lote, proveedor, factura y fecha, ingreso, vencimiento con insignia de severidad (`EXPIRED`, `RED`, `YELLOW`, `NONE`) más días restantes, disponible frente a recibido y columnas de costo unitario y total solo para `ADMIN`/`PURCHASING`.
+- Alta en panel lateral (`lot-form`): búsqueda de producto activo, presentación, proveedor, factura con fecha no futura, número de lote, cantidad recibida > 0, costo unitario ≥ 0, vencimiento y notas ≤ 200. El vencimiento es obligatorio cuando el producto lo exige y siempre debe ser posterior al ingreso.
+- Último costo por presentación con `GET /api/products/{id}/last-cost`: se muestra como referencia, se sugiere al elegir presentación si el costo está vacío y se aplica con un clic.
+- Corrección de cantidad con `PATCH /api/lots/{id}/available-quantity`, validando que no sea negativa ni supere la cantidad recibida.
+- Permisos coherentes con `SecurityConfig`: lectura para los tres roles, corrección para `ADMIN`/`WAREHOUSE` y alta solo `ADMIN` porque `/api/suppliers/options` está restringido a `ADMIN`/`PURCHASING`. `WAREHOUSE` ve una nota explicativa; `PURCHASING` consulta con costos en modo lectura.
+- `lot.model.ts` centraliza el payload (recorte de textos y redondeo a 2 decimales), la lectura de fechas ISO como locales sin desfase, las severidades y sus tonos, las etiquetas de días, cantidades y costos, y la búsqueda del último costo por presentación.
+- Pruebas nuevas en `lot.model.spec.ts` (payload, fechas, severidad, etiquetas y último costo). Verificación: `npm run build` en verde (inicial 314.38 kB) y `npm test -- --watch=false` con 58 pruebas en verde.
+- Entregable 7.2 completado. Siguiente: entregable 7.3 (clientes).
 
 ## 10. Testing y CI/CD
 
@@ -645,7 +661,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones y precios con historial completados (17/11/2026); lotes de 7.2 y los entregables 7.3–7.6 pendientes |
+| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones, precios con historial y lotes completados (17/11/2026); entregables 7.3–7.6 pendientes |
 | 8 | Reportes | Pendiente |
 | 9 | Endurecimiento | Pendiente |
 

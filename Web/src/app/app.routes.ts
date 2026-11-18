@@ -43,6 +43,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('@features/products/products.routes').then((module) => module.PRODUCTS_ROUTES),
       },
+      {
+        path: 'lots',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'WAREHOUSE', 'PURCHASING'] },
+        loadChildren: () =>
+          import('@features/lots/lots.routes').then((module) => module.LOTS_ROUTES),
+      },
     ],
   },
   {
