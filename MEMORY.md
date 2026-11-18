@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 17/11/2026.
-> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1** y **7.2 completado** con los módulos de **catálogos** (categorías, tipos, marcas, modelos, unidades y presentaciones), de **productos con sus presentaciones**, de **precios con historial** y de **lotes con corrección de cantidad**, más un sistema de botones con degradado de marca. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 58 pruebas en verde.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1**; **7.2 completado** con los módulos de **catálogos**, **productos con sus presentaciones**, **precios con historial** y **lotes con corrección de cantidad**, **7.3 completado** con **clientes** (listado, detalle, alta, edición, estado y crédito) y **7.4 completado** con **ventas** (listado, alta, edición, detalle, confirmación y cancelación), más un sistema de botones con degradado de marca. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 87 pruebas en verde.
 
 ## 1. Resumen
 
@@ -191,6 +191,37 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Verificación: `npm run build` en verde (inicial 314.38 kB) y `npm test -- --watch=false` con 58 pruebas en verde (14 nuevas de lotes).
 - Pendiente del entregable 7.2: ninguno. Siguiente: entregable 7.3 (clientes).
 
+### Avance 17/11/2026 — Fase 7.3 (Clientes)
+
+- Nuevo módulo `/customers` con rutas propias (`CUSTOMERS_ROUTES`), sección «Comercial» en la navegación y detalle `/customers/:id`.
+- Listado con búsqueda por nombre, documento, NIT o correo; filtros por tipo de documento y estado; paginación y contador. Cada fila muestra nombre legal/comercial, documento, contacto, crédito, saldo con tono y estado lógico.
+- Alta y edición en panel lateral con datos generales, documentos (tipo, número, NIT, NRC, DUI) y contacto (teléfono, correo, dirección). Las validaciones replican longitudes, formato de correo/teléfono y unicidad (409 del backend mediante `readApiError`).
+- El alta navega al detalle del cliente creado. En la edición se reenvían las condiciones de crédito vigentes para que `PUT` no las reinicie.
+- Detalle con datos fiscales y de contacto, fechas de registro/actualización, tarjeta de crédito (límite, días, saldo pendiente, disponible y barra de uso) y avisos de cliente inactivo o sin línea de crédito.
+- `ADMIN` ajusta crédito con un panel dedicado (límite ≥ 0 hasta 10 enteros/2 decimales y días enteros ≥ 0); se advierte si el nuevo límite queda por debajo del saldo pendiente. También activa/desactiva con confirmación en línea.
+- Permisos reales según `SecurityConfig`: lectura `ADMIN`/`PURCHASING`/`SELLER`; alta y edición `ADMIN`/`SELLER`; estado y crédito solo `ADMIN`. `PURCHASING` queda en modo lectura.
+- Al crear se envía crédito en cero; el ajuste posterior queda reservado a `ADMIN` (decisión D-25).
+- `customer.model.ts` centraliza payloads con recorte y vacíos a `null`, normalización del crédito, etiquetas de tipo/documento, documento principal y cálculos de disponible, uso, tono y estado del crédito.
+- Iconos SVG nuevos: `creditCard`, `phone`, `mail`, `mapPin`, `idCard`.
+- Verificación: `npm run build` en verde (inicial 315.28 kB) y `npm test -- --watch=false` con 72 pruebas en verde (14 nuevas de clientes).
+- Pendiente del entregable 7.3: ninguno. Siguiente: entregable 7.4 (ventas).
+
+### Avance 17/11/2026 — Fase 7.4 (Ventas)
+
+- Nuevo módulo `/sales` con rutas propias (`SALES_ROUTES`) y sección «Comercial» ampliada en la navegación para los cuatro roles.
+- Listado con filtros por rango de fechas (`from`/`to`), cliente (`customerId`) y estado (`DRAFT`/`CONFIRMED`/`CANCELLED`); paginación y contador. `SELLER` solo ve sus ventas porque la API aplica la visibilidad por propietario.
+- Editor `/sales/new` y `/sales/:id/edit` (solo `ADMIN`/`SELLER`): cliente opcional para consumidor final, condición de pago contado/crédito, método de pago, notas y líneas por presentación.
+- Búsqueda de productos activos con `GET /api/products`; al elegir un producto se cargan sus presentaciones (`GET /api/products/{id}`) con precio vigente y stock, y se agregan como líneas con cantidad, precio y descuento editables.
+- Resumen lateral con total y descuentos en vivo; el backend recalcula base e IVA. Se impide duplicar presentaciones y se valida cantidad/precio mayores que cero y descuento dentro del importe de la línea.
+- Con cliente seleccionado se muestra límite, saldo, disponible y días de crédito; para ventas a crédito se advierte si faltan días o si el total supera el disponible (`creditIssue`), sin reemplazar la validación del backend al confirmar.
+- Detalle `/sales/:id` con cliente, vendedor, condiciones, notas, líneas con IVA y totales (subtotal, descuentos, IVA, total, pagado y saldo pendiente).
+- Confirmación en línea con `POST /api/sales/{id}/confirm` (FEFO) y cancelación con motivo opcional mediante `POST /api/sales/{id}/cancel`; solo `ADMIN` cancela. Los conflictos de stock, crédito o factura emitida se muestran con el mensaje del backend.
+- Permisos reales según `SecurityConfig`: lectura para los cuatro roles; crear, editar y confirmar `ADMIN`/`SELLER` (el vendedor solo sobre sus ventas); cancelar solo `ADMIN`.
+- `sale.model.ts` centraliza payloads con recorte y redondeo, totales estimados, etiquetas, saldo pendiente, permisos y validación visual del crédito.
+- `CustomerService.findOptions()` expone `/api/customers/options` para el combo del editor y el filtro del listado.
+- Verificación: `npm run build` en verde (inicial 315.52 kB) y `npm test -- --watch=false` con 87 pruebas en verde (15 nuevas de ventas).
+- Pendiente del entregable 7.4: ninguno. Siguiente: entregable 7.5 (facturación).
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -230,6 +261,8 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-22 | El cambio de precio y su historial viven en el detalle del producto, en un panel por presentación; solo `ADMIN` ve la acción, el precio anterior se cierra al guardar y el historial muestra vigencia y autor | Aplicada |
 | D-23 | Los botones usan degradados de marca (`--gradient-brand`, `--gradient-soft`) con bordes redondeados, elevación al pasar el cursor y foco visible; la variante peligro conserva su propio degradado y los controles de icono usan la versión suave | Aplicada |
 | D-24 | Los lotes se consultan en `/lots` con filtros de factura, proveedor, existencia y producto; el alta vive en un panel lateral y la corrección de cantidad en otro. El alta queda para `ADMIN` porque requiere `/api/suppliers/options`; `WAREHOUSE` corrige cantidades y `PURCHASING` consulta con costos en modo lectura | Aplicada |
+| D-25 | Clientes se gestiona en `/customers` y `/customers/:id`; lectura `ADMIN`/`PURCHASING`/`SELLER`, alta y edición `ADMIN`/`SELLER`, estado y crédito solo `ADMIN`. Al crear se envía crédito en cero y el ajuste posterior se hace desde el detalle; el saldo pendiente y el disponible se calculan con `outstandingBalance` de la API | Aplicada |
+| D-26 | Ventas se gestiona en `/sales` con editor de página completa (`/sales/new`, `/sales/:id/edit`) y detalle (`/sales/:id`). La venta se crea en `DRAFT`, el precio se toma del vigente de la presentación y el servidor recalcula base e IVA. Lectura para los cuatro roles, crear/editar/confirmar para `ADMIN`/`SELLER` y cancelar solo `ADMIN`; la confirmación descuenta stock con FEFO | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -381,7 +414,7 @@ npm test -- --watch=false
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Ejecutar la suite con Testcontainers cuando haya Docker disponible.
 - Configurar CI/CD.
-- Frontend: entregable 7.2 completado (catálogos, productos, presentaciones, precios con historial y lotes); continuar con los entregables 7.3 a 7.6 (clientes, ventas, facturación y reportes) sobre la base ya creada en `Web/`.
+- Frontend: entregables 7.2, 7.3 y 7.4 completados (inventario, clientes y ventas); continuar con los entregables 7.5 y 7.6 (facturación y reportes) sobre la base ya creada en `Web/`.
 - Frontend: validar visualmente el rediseño 7.1.1 en navegador con backend y credenciales reales; en el entorno de trabajo no estaban disponibles.
 - Frontend: definir estrategia de despliegue con proxy inverso para `/api`.
 - Regenerar diagramas de arquitectura y clases.

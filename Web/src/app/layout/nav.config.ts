@@ -48,4 +48,21 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       },
     ],
   },
+  {
+    label: 'Comercial',
+    items: [
+      {
+        label: 'Clientes',
+        icon: 'users',
+        route: '/customers',
+        roles: ['ADMIN', 'PURCHASING', 'SELLER'],
+      },
+      {
+        label: 'Ventas',
+        icon: 'cart',
+        route: '/sales',
+        roles: ['ADMIN', 'WAREHOUSE', 'PURCHASING', 'SELLER'],
+      },
+    ],
+  },
 ];
