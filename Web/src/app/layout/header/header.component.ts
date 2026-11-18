@@ -108,7 +108,8 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
     }
 
     .header__icon-button:hover {
-      background: var(--surface-hover);
+      background: var(--gradient-soft);
+      border-color: var(--brand-200);
       color: var(--brand-700);
     }
 

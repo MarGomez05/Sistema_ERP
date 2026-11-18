@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 17/11/2026.
-> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1** y **7.2 en progreso** con los módulos de **catálogos** (categorías, tipos, marcas, modelos, unidades y presentaciones) y de **productos con sus presentaciones**. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 40 pruebas en verde.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1** y **7.2 en progreso** con los módulos de **catálogos** (categorías, tipos, marcas, modelos, unidades y presentaciones), de **productos con sus presentaciones** y de **precios con historial**, más un sistema de botones con degradado de marca. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 44 pruebas en verde.
 
 ## 1. Resumen
 
@@ -47,7 +47,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Aún no hay subida de archivos ni almacenamiento local/S3 (D-06).
 - Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes, ventas, facturación e imágenes, y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard con gráficas SVG/CSS propias, página 404, **catálogos de inventario** y **productos con presentaciones**; documentado en `Web/README.md`.
+- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard con gráficas SVG/CSS propias, página 404, **catálogos de inventario**, **productos con presentaciones** y **precios con historial**; documentado en `Web/README.md`.
 - Rama de trabajo actual: `feature/web-base`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
@@ -162,10 +162,21 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Alta/edición de producto en panel lateral; `ProductRequestDto` no incluye `taxRate`, por lo que el formulario no lo envía ni lo inventa.
 - El detalle agrupa información general y tarjetas de presentación con espacio 16:9 reservado para la imagen: se muestra si `imageUrl` existe y, si no o si falla la carga, un marcador «Imagen pendiente · Espacio reservado».
 - El formulario de presentación edita código, stock mínimo, `imageUrl` e `imageAlt` con vista previa y validación (`http(s)://` o ruta relativa con `/`, máx. 500/150). Como `ProductPresentationUpdateRequestDto` borra la imagen si no se envía, el formulario siempre reenvía la URL vigente.
-- Precio vigente y existencias se muestran en modo lectura; el cambio de precio y los lotes quedan para la siguiente parte del entregable.
+- Precio vigente y existencias se muestran en modo lectura; el cambio de precio y los lotes quedan para la siguiente parte del entregable (el cambio de precio se completó en el avance siguiente).
 - Iconos SVG añadidos: `image` y `arrowLeft`.
 - Verificación: `npm run build` en verde (inicial 309.80 kB) y `npm test -- --watch=false` con 40 pruebas en verde, incluidas `product.model.spec.ts`.
 - Pendiente del entregable 7.2: cambio de precio, historial y lotes.
+
+### Avance 17/11/2026 — Fase 7.2 (Precios e historial) y rediseño de botones
+
+- `ProductService` incorpora `GET/POST /api/products/{productId}/presentations/{presentationId}/prices`; ambos endpoints son exclusivos de `ADMIN` según `SecurityConfig`.
+- Nuevo componente `product-price-panel` en el detalle: muestra el precio vigente en una tarjeta con degradado de marca, formulario del nuevo valor (obligatorio, > 0, máximo 8 enteros y 2 decimales, redondeo `HALF_UP` a 2 decimales) e historial con fecha de inicio, cierre, autor y estado «Vigente»/«Cerrado».
+- Al guardar, se cierra el precio vigente y el nuevo queda activo; el panel y el detalle se recargan para reflejar el cambio sin cerrar el formulario. Los errores 400/409 del backend se muestran con `readApiError`.
+- La acción «Precio» solo aparece para `ADMIN`; `WAREHOUSE` y `PURCHASING` siguen viendo el precio vigente en modo lectura.
+- Se corrigió un defecto del sistema de botones: la variante primaria nunca recibía `app-button--primary`, por lo que los CTA se veían sin relleno.
+- Rediseño de botones: tokens `--gradient-brand`, `--gradient-soft`, `--gradient-danger`, `--shadow-brand` y `--shadow-brand-strong`; primaria con degradado azul→cian que se desplaza al pasar el cursor, secundaria con borde degradado, peligro con degradado propio, elevación sutil, anillo de foco y respeto de `prefers-reduced-motion`. Header, paginación, cierre de paneles y enlace activo del sidebar usan el lenguaje suave del degradado.
+- Verificación: `npm run build` en verde (inicial 310.58 kB) y `npm test -- --watch=false` con 44 pruebas en verde.
+- Pendiente del entregable 7.2: lotes (ingreso, consulta, corrección de cantidad y último costo).
 
 ### Documentación completada en esta rama
 
@@ -203,6 +214,8 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-19 | Las gráficas del dashboard son componentes SVG/CSS propios (`donut`, `column`, `bar`), sin librerías de visualización, y solo representan datos reales de `summary`, `low-stock` y `expiring-lots` | Aplicada |
 | D-20 | Los seis catálogos de inventario comparten una sola página con pestañas accesibles, listado y formulario dirigidos por configuración (`CATALOGS`); la lectura es `ADMIN`/`WAREHOUSE`/`PURCHASING` y la escritura solo `ADMIN` | Aplicada |
 | D-21 | Productos y sus presentaciones se gestionan en `/products` (listado) y `/products/:id` (detalle, presentaciones e imágenes por URL); la lectura es `ADMIN`/`WAREHOUSE`/`PURCHASING` y la escritura `ADMIN`/`WAREHOUSE`; el cambio de precio se reserva a `ADMIN` y queda para el siguiente entregable | Aplicada |
+| D-22 | El cambio de precio y su historial viven en el detalle del producto, en un panel por presentación; solo `ADMIN` ve la acción, el precio anterior se cierra al guardar y el historial muestra vigencia y autor | Aplicada |
+| D-23 | Los botones usan degradados de marca (`--gradient-brand`, `--gradient-soft`) con bordes redondeados, elevación al pasar el cursor y foco visible; la variante peligro conserva su propio degradado y los controles de icono usan la versión suave | Aplicada |
 
 ## 5. Reglas de negocio clave
 

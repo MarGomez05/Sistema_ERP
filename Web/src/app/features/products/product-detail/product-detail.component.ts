@@ -19,13 +19,16 @@ import { PageHeaderComponent } from '@shared/ui/page-header/page-header.componen
 import { SkeletonComponent } from '@shared/ui/skeleton/skeleton.component';
 import { ProductFormComponent } from '../product-form/product-form.component';
 import { ProductPresentationFormComponent } from '../product-presentation-form/product-presentation-form.component';
+import { ProductPricePanelComponent } from '../product-price-panel/product-price-panel.component';
 import {
+  PriceFormValue,
   ProductDetail,
   ProductFormValue,
   ProductModelOption,
   ProductPresentation,
   ProductPresentationFormValue,
   ProductPresentationOption,
+  ProductPriceHistoryItem,
   ProductSelectOption,
   formatMoney,
   formatQuantity,
@@ -35,7 +38,7 @@ import {
 } from '../product.model';
 import { ProductService } from '../product.service';
 
-type DetailPanel = 'product' | 'presentation';
+type DetailPanel = 'product' | 'presentation' | 'price';
 
 // Detalle del producto y gestión de sus presentaciones (contrato 5.1 y 5.2).
 @Component({
@@ -49,6 +52,7 @@ type DetailPanel = 'product' | 'presentation';
     PageHeaderComponent,
     ProductFormComponent,
     ProductPresentationFormComponent,
+    ProductPricePanelComponent,
     RouterLink,
     SkeletonComponent,
   ],
@@ -305,6 +309,18 @@ type DetailPanel = 'product' | 'presentation';
                                   No
                                 </button>
                               } @else {
+                                @if (canManagePrices()) {
+                                  <button
+                                    appButton
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    (click)="startPriceChange(presentation)"
+                                  >
+                                    <app-icon name="trendingUp" [size]="15" />
+                                    Precio
+                                  </button>
+                                }
                                 <button
                                   appButton
                                   type="button"
@@ -340,7 +356,7 @@ type DetailPanel = 'product' | 'presentation';
         </div>
 
         @if (activePanel() !== null) {
-          <aside class="detail-side" aria-label="Formulario del producto">
+          <aside class="detail-side" aria-label="Panel de edición del producto">
             @if (activePanel() === 'product') {
               <app-product-form
                 [record]="current"
@@ -352,7 +368,7 @@ type DetailPanel = 'product' | 'presentation';
                 (submitted)="saveProduct($event)"
                 (cancelled)="closePanel()"
               />
-            } @else {
+            } @else if (activePanel() === 'presentation') {
               <app-product-presentation-form
                 [record]="editingPresentation()"
                 [presentations]="availablePresentations()"
@@ -360,6 +376,18 @@ type DetailPanel = 'product' | 'presentation';
                 [error]="presentationFormError()"
                 (submitted)="savePresentation($event)"
                 (cancelled)="closePanel()"
+              />
+            } @else if (pricePresentation(); as priced) {
+              <app-product-price-panel
+                [record]="priced"
+                [history]="priceHistory()"
+                [historyLoading]="priceHistoryLoading()"
+                [historyError]="priceHistoryError()"
+                [saving]="savingPrice()"
+                [error]="priceFormError()"
+                (submitted)="savePrice($event)"
+                (cancelled)="closePanel()"
+                (historyRetry)="loadPriceHistory(priced.id)"
               />
             }
           </aside>
@@ -663,6 +691,13 @@ export class ProductDetailComponent implements OnInit {
   protected readonly savingPresentation = signal(false);
   protected readonly presentationFormError = signal<string | null>(null);
 
+  protected readonly pricePresentation = signal<ProductPresentation | null>(null);
+  protected readonly priceHistory = signal<ProductPriceHistoryItem[]>([]);
+  protected readonly priceHistoryLoading = signal(false);
+  protected readonly priceHistoryError = signal<string | null>(null);
+  protected readonly savingPrice = signal(false);
+  protected readonly priceFormError = signal<string | null>(null);
+
   protected readonly confirmingStatus = signal(false);
   protected readonly statusLoading = signal(false);
 
@@ -672,6 +707,8 @@ export class ProductDetailComponent implements OnInit {
   protected readonly failedImages = signal<ReadonlySet<number>>(new Set<number>());
 
   protected readonly canWrite = computed(() => this.auth.canAccess(['ADMIN', 'WAREHOUSE']));
+
+  protected readonly canManagePrices = computed(() => this.auth.canAccess(['ADMIN']));
 
   protected readonly headerTitle = computed(() => this.product()?.name ?? 'Producto');
 
@@ -714,6 +751,15 @@ export class ProductDetailComponent implements OnInit {
     this.products.getById(this.productId).subscribe({
       next: (product) => {
         this.product.set(product);
+
+        const priced = this.pricePresentation();
+
+        if (priced !== null) {
+          this.pricePresentation.set(
+            product.presentations.find((item) => item.id === priced.id) ?? null,
+          );
+        }
+
         this.loading.set(false);
       },
       error: () => {
@@ -802,11 +848,39 @@ export class ProductDetailComponent implements OnInit {
     this.activePanel.set('presentation');
   }
 
+  protected startPriceChange(presentation: ProductPresentation): void {
+    this.pricePresentation.set(presentation);
+    this.priceFormError.set(null);
+    this.priceHistory.set([]);
+    this.activePanel.set('price');
+    this.loadPriceHistory(presentation.id);
+  }
+
+  protected loadPriceHistory(presentationId: number): void {
+    this.priceHistoryLoading.set(true);
+    this.priceHistoryError.set(null);
+
+    this.products.getPriceHistory(this.productId, presentationId).subscribe({
+      next: (history) => {
+        this.priceHistory.set(history);
+        this.priceHistoryLoading.set(false);
+      },
+      error: () => {
+        this.priceHistoryError.set('No se pudo cargar el historial de precios.');
+        this.priceHistoryLoading.set(false);
+      },
+    });
+  }
+
   protected closePanel(): void {
     this.activePanel.set(null);
     this.editingPresentation.set(null);
     this.productFormError.set(null);
     this.presentationFormError.set(null);
+    this.pricePresentation.set(null);
+    this.priceHistory.set([]);
+    this.priceHistoryError.set(null);
+    this.priceFormError.set(null);
   }
 
   protected saveProduct(value: ProductFormValue): void {
@@ -857,6 +931,38 @@ export class ProductDetailComponent implements OnInit {
         this.savingPresentation.set(false);
         this.presentationFormError.set(
           readApiError(error, 'No se pudo guardar la presentación. Revisa los datos.'),
+        );
+      },
+    });
+  }
+
+  protected savePrice(value: PriceFormValue): void {
+    const priced = this.pricePresentation();
+
+    if (priced === null) {
+      return;
+    }
+
+    this.savingPrice.set(true);
+    this.priceFormError.set(null);
+
+    this.products.changePrice(this.productId, priced.id, value).subscribe({
+      next: (price) => {
+        this.savingPrice.set(false);
+        this.toast.success(
+          'Precio actualizado',
+          `${priced.code} · ${formatMoney(price.price)} vigente`,
+        );
+        this.load();
+        this.loadPriceHistory(priced.id);
+      },
+      error: (error: unknown) => {
+        this.savingPrice.set(false);
+        this.priceFormError.set(
+          readApiError(
+            error,
+            'No se pudo cambiar el precio. Verifica el valor e inténtalo de nuevo.',
+          ),
         );
       },
     });

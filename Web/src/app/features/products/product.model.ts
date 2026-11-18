@@ -133,6 +133,27 @@ export interface ProductPresentationUpdatePayload {
   imageAlt: string | null;
 }
 
+export interface ProductPriceChangedBy {
+  id: number;
+  fullName: string;
+}
+
+export interface ProductPriceHistoryItem {
+  id: number;
+  price: number;
+  startDate: string;
+  endDate: string | null;
+  changedBy: ProductPriceChangedBy;
+}
+
+export interface PriceFormValue {
+  price: number | null;
+}
+
+export interface PricePayload {
+  price: number;
+}
+
 const QUANTITY_FORMAT = new Intl.NumberFormat('es-SV', {
   maximumFractionDigits: 2,
 });
@@ -142,6 +163,14 @@ const MONEY_FORMAT = new Intl.NumberFormat('es-SV', {
   currency: 'USD',
   minimumFractionDigits: 2,
   maximumFractionDigits: 2,
+});
+
+const DATE_TIME_FORMAT = new Intl.DateTimeFormat('es-SV', {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
 });
 
 function optionalText(value: string | null | undefined): string | null {
@@ -190,6 +219,23 @@ export function formatQuantity(value: number | null | undefined): string {
 
 export function formatMoney(value: number | null | undefined): string {
   return value === null || value === undefined ? '—' : MONEY_FORMAT.format(value);
+}
+
+export function formatDateTime(value: string | null | undefined): string {
+  if (value === null || value === undefined || value.trim().length === 0) {
+    return '—';
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? '—' : DATE_TIME_FORMAT.format(date);
+}
+
+export function toPricePayload(value: PriceFormValue): PricePayload {
+  return { price: value.price ?? 0 };
+}
+
+export function isCurrentPrice(item: ProductPriceHistoryItem): boolean {
+  return item.endDate === null;
 }
 
 export function stockStatusLabel(status: StockStatus): string {
