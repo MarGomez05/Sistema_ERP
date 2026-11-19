@@ -364,7 +364,7 @@ export interface EditorLine {
               <div>
                 <h2 id="sale-lines-title" class="panel__title">Líneas de la venta</h2>
                 <p class="panel__subtitle">
-                  Ajusta cantidad, precio y descuento en moneda antes de guardar.
+                  Ajusta cantidad y descuento. El precio se toma del catálogo y no se modifica.
                 </p>
               </div>
               <app-badge tone="neutral">{{ lines().length }} líneas</app-badge>
@@ -420,15 +420,11 @@ export interface EditorLine {
                             />
                           </td>
                           <td>
-                            <input
-                              class="field__control lines-input"
-                              type="number"
-                              min="0.01"
-                              step="0.01"
-                              [value]="line.unitPrice"
-                              [attr.aria-label]="'Precio de ' + line.productName"
-                              (input)="updateLine(index, 'unitPrice', $event)"
-                            />
+                            <span class="lines-price">
+                              <app-icon name="lock" [size]="13" />
+                              {{ formatMoney(line.unitPrice) }}
+                            </span>
+                            <span class="lines-meta">Precio vigente</span>
                           </td>
                           <td>
                             <input
@@ -888,6 +884,14 @@ export interface EditorLine {
       font-variant-numeric: tabular-nums;
     }
 
+    .lines-price {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      font-weight: var(--weight-semibold);
+      font-variant-numeric: tabular-nums;
+    }
+
     .editor-side {
       position: sticky;
       top: calc(var(--header-height) + var(--space-4));
@@ -1272,11 +1276,7 @@ export class SaleEditorComponent implements OnInit {
     this.lines.update((lines) => lines.filter((_, position) => position !== index));
   }
 
-  protected updateLine(
-    index: number,
-    field: 'quantity' | 'unitPrice' | 'discount',
-    event: Event,
-  ): void {
+  protected updateLine(index: number, field: 'quantity' | 'discount', event: Event): void {
     const raw = (event.target as HTMLInputElement).value;
     const parsed = Number(raw);
     const value = Number.isFinite(parsed) ? parsed : 0;

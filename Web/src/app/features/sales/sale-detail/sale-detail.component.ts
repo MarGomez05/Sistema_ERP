@@ -12,6 +12,12 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { AuthService } from '@core/auth/auth.service';
 import { readApiError } from '@core/http/api-error';
 import { ToastService } from '@core/ui/toast.service';
+import { InvoiceService } from '@features/billing/invoice.service';
+import {
+  ISSUED_INVOICE_TYPE_OPTIONS,
+  IssuedInvoiceType,
+  canCreateInvoice,
+} from '@features/billing/invoice.model';
 import { formatDateTime, formatMoney, formatQuantity } from '@features/products/product.model';
 import { BadgeComponent } from '@shared/ui/badge/badge.component';
 import { ButtonComponent } from '@shared/ui/button/button.component';
@@ -95,6 +101,13 @@ import { SaleService } from '../sale.service';
             }
           }
 
+          @if (canInvoice(current) && !invoiceOpen()) {
+            <button appButton type="button" (click)="openInvoice(current)">
+              <app-icon name="receipt" [size]="16" />
+              Facturar
+            </button>
+          }
+
           @if (canCancel(current)) {
             <button appButton type="button" variant="danger" (click)="openCancel()">
               <app-icon name="close" [size]="16" />
@@ -123,7 +136,7 @@ import { SaleService } from '../sale.service';
         </button>
       </div>
     } @else if (sale(); as current) {
-      <div class="detail-layout" [class.detail-layout--panel]="cancelOpen()">
+      <div class="detail-layout" [class.detail-layout--panel]="cancelOpen() || invoiceOpen()">
         <div class="detail-main">
           <section class="panel" aria-labelledby="sale-overview-title">
             <div class="panel__header">
@@ -131,7 +144,12 @@ import { SaleService } from '../sale.service';
                 <h2 id="sale-overview-title" class="panel__title">Información de la venta</h2>
                 <p class="panel__subtitle">Cliente, vendedor y condiciones registradas.</p>
               </div>
-              <app-badge [tone]="statusTone(current)">{{ statusLabel(current) }}</app-badge>
+              <div class="detail-badges">
+                <app-badge [tone]="statusTone(current)">{{ statusLabel(current) }}</app-badge>
+                @if (current.invoiceId !== null) {
+                  <app-badge tone="success" [dot]="true">Facturada</app-badge>
+                }
+              </div>
             </div>
 
             <div class="panel__body">
@@ -168,6 +186,16 @@ import { SaleService } from '../sale.service';
                   <dt>Método de pago</dt>
                   <dd>{{ methodLabel(current) }}</dd>
                 </div>
+                @if (current.invoiceId !== null) {
+                  <div>
+                    <dt>Factura</dt>
+                    <dd>
+                      <a class="detail-link" [routerLink]="['/invoices', current.invoiceId]">
+                        {{ current.invoiceNumber }}
+                      </a>
+                    </dd>
+                  </div>
+                }
                 <div class="detail-meta__wide">
                   <dt>Notas</dt>
                   <dd>{{ current.notes ?? 'Sin notas registradas.' }}</dd>
@@ -292,6 +320,112 @@ import { SaleService } from '../sale.service';
             }
           </section>
 
+          @if (current.invoiceId !== null) {
+            <section class="invoice-card invoice-card--success" aria-labelledby="sale-invoice-done">
+              <h2 id="sale-invoice-done" class="invoice-card__title">Venta facturada</h2>
+              <p class="invoice-card__text">
+                {{ current.invoiceNumber }} por {{ formatMoney(current.total) }}. Los pagos se
+                registran desde el detalle de la factura.
+              </p>
+              <div class="invoice-card__actions">
+                <a appButton [routerLink]="['/invoices', current.invoiceId]">
+                  <app-icon name="receipt" [size]="16" />
+                  Ver factura
+                </a>
+              </div>
+            </section>
+          }
+
+          @if (invoiceOpen()) {
+            <section class="invoice-card" aria-labelledby="sale-invoice-title">
+              <h2 id="sale-invoice-title" class="invoice-card__title">Emitir factura</h2>
+              <p class="invoice-card__text">
+                La factura se genera desde {{ current.saleNumber }} con condición
+                {{ conditionLabel(current) }}; cliente, líneas y totales quedan congelados.
+              </p>
+
+              @if (invoiceError(); as message) {
+                <p class="invoice-card__error" role="alert">
+                  <app-icon name="alertCircle" [size]="15" />
+                  {{ message }}
+                </p>
+              }
+
+              <form [formGroup]="invoiceForm" (ngSubmit)="issueInvoice(current)" novalidate>
+                <div class="field">
+                  <label class="field__label" for="sale-invoice-type">
+                    Tipo de factura <span class="field__required" aria-hidden="true">*</span>
+                  </label>
+                  <select
+                    id="sale-invoice-type"
+                    class="field__control"
+                    formControlName="invoiceType"
+                  >
+                    @for (option of invoiceTypes; track option.value) {
+                      <option [value]="option.value">{{ option.label }}</option>
+                    }
+                  </select>
+                  <p class="field__hint">{{ invoiceTypeHint(current) }}</p>
+                </div>
+
+                <div class="field">
+                  <label class="field__label" for="sale-invoice-control">Número de control</label>
+                  <input
+                    id="sale-invoice-control"
+                    class="field__control"
+                    type="text"
+                    formControlName="controlNumber"
+                    maxlength="30"
+                    placeholder="Opcional, máximo 30 caracteres"
+                  />
+                  <p class="field__hint">Si se usa, debe ser único en el sistema.</p>
+                </div>
+
+                <div class="field">
+                  <label class="field__label" for="sale-invoice-notes">Notas</label>
+                  <textarea
+                    id="sale-invoice-notes"
+                    class="field__control"
+                    rows="2"
+                    formControlName="notes"
+                    maxlength="255"
+                    placeholder="Opcional, máximo 255 caracteres"
+                  ></textarea>
+                </div>
+
+                @if (current.paymentCondition === 'CREDIT') {
+                  <p class="invoice-card__note">
+                    <app-icon name="clock" [size]="15" />
+                    El vencimiento se calcula con los días de crédito del cliente.
+                  </p>
+                }
+
+                <div class="invoice-card__actions">
+                  <button
+                    appButton
+                    type="button"
+                    variant="secondary"
+                    [disabled]="invoiceSaving()"
+                    (click)="closeInvoice()"
+                  >
+                    Volver
+                  </button>
+                  <button
+                    appButton
+                    type="submit"
+                    [loading]="invoiceSaving()"
+                    [disabled]="
+                      invoiceForm.controls.invoiceType.value === 'CCF' && current.customer === null
+                    "
+                  >
+                    <app-icon name="receipt" [size]="16" />
+                    Emitir factura
+                  </button>
+                </div>
+              </form>
+            </section>
+          }
+
           @if (cancelOpen()) {
             <section class="cancel-card" aria-labelledby="sale-cancel-title">
               <h2 id="sale-cancel-title" class="cancel-card__title">Cancelar venta</h2>
@@ -352,6 +486,13 @@ import { SaleService } from '../sale.service';
       flex-wrap: wrap;
       align-items: center;
       gap: var(--space-3);
+    }
+
+    .detail-badges {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
     }
 
     .detail-confirm {
@@ -556,6 +697,74 @@ import { SaleService } from '../sale.service';
       color: var(--warning-700);
     }
 
+    .invoice-card {
+      padding: var(--space-5);
+      background: var(--surface);
+      border: 1px solid var(--brand-200);
+      border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .invoice-card--success {
+      border-color: var(--success-100);
+    }
+
+    .invoice-card__title {
+      font-size: var(--text-base);
+      font-weight: var(--weight-semibold);
+      color: var(--brand-700);
+    }
+
+    .invoice-card--success .invoice-card__title {
+      color: var(--success-700);
+    }
+
+    .invoice-card__text {
+      margin-top: 6px;
+      color: var(--text-muted);
+      font-size: var(--text-xs);
+      line-height: 1.55;
+    }
+
+    .invoice-card__error {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      margin-top: 10px;
+      padding: 9px 10px;
+      background: var(--danger-100);
+      border-radius: var(--radius-sm);
+      color: var(--danger-700);
+      font-size: var(--text-xs);
+      line-height: 1.5;
+    }
+
+    .invoice-card__note {
+      display: flex;
+      align-items: flex-start;
+      gap: 7px;
+      padding: 9px 10px;
+      background: var(--warning-100);
+      border-radius: var(--radius-sm);
+      color: var(--warning-700);
+      font-size: var(--text-xs);
+      line-height: 1.5;
+    }
+
+    .invoice-card form {
+      display: grid;
+      gap: var(--space-4);
+      margin-top: var(--space-4);
+    }
+
+    .invoice-card__actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: var(--space-2);
+      margin-top: var(--space-4);
+    }
+
     .cancel-card {
       padding: var(--space-5);
       background: var(--surface);
@@ -616,6 +825,7 @@ export class SaleDetailComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly sales = inject(SaleService);
+  private readonly invoicesService = inject(InvoiceService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
   private readonly formBuilder = inject(FormBuilder);
@@ -636,6 +846,19 @@ export class SaleDetailComponent implements OnInit {
 
   protected readonly cancelForm = this.formBuilder.nonNullable.group({
     reason: ['', [Validators.maxLength(255)]],
+  });
+
+  protected readonly invoiceTypes = ISSUED_INVOICE_TYPE_OPTIONS;
+  protected readonly invoiceOpen = signal(false);
+  protected readonly invoiceSaving = signal(false);
+  protected readonly invoiceError = signal<string | null>(null);
+
+  protected readonly invoiceForm = this.formBuilder.nonNullable.group({
+    invoiceType: this.formBuilder.nonNullable.control<IssuedInvoiceType>('CONSUMER', [
+      Validators.required,
+    ]),
+    controlNumber: ['', [Validators.maxLength(30)]],
+    notes: ['', [Validators.maxLength(255)]],
   });
 
   protected readonly headerTitle = computed(() => this.sale()?.saleNumber ?? 'Venta');
@@ -711,6 +934,20 @@ export class SaleDetailComponent implements OnInit {
     return canCancelSale(sale, this.auth.canAccess(['ADMIN']));
   }
 
+  protected canInvoice(sale: Sale): boolean {
+    return canCreateInvoice(sale.status, this.auth.canAccess(['ADMIN', 'SELLER']), sale.invoiceId);
+  }
+
+  protected invoiceTypeHint(sale: Sale): string {
+    if (this.invoiceForm.controls.invoiceType.value !== 'CCF') {
+      return 'Permitido con o sin cliente registrado.';
+    }
+
+    return sale.customer === null
+      ? 'El CCF requiere un cliente registrado; esta venta no tiene uno.'
+      : 'Requiere un cliente registrado con datos fiscales.';
+  }
+
   protected load(): void {
     this.loading.set(true);
     this.error.set(null);
@@ -782,6 +1019,70 @@ export class SaleDetailComponent implements OnInit {
         this.cancelLoading.set(false);
         this.cancelError.set(
           readApiError(error, 'No se pudo cancelar la venta. Intenta nuevamente.'),
+        );
+      },
+    });
+  }
+
+  protected openInvoice(sale: Sale): void {
+    if (sale.invoiceId !== null) {
+      return;
+    }
+
+    this.invoiceError.set(null);
+    this.invoiceForm.reset({
+      invoiceType: sale.customer === null ? 'CONSUMER' : 'CCF',
+      controlNumber: '',
+      notes: '',
+    });
+    this.invoiceForm.markAsPristine();
+    this.invoiceForm.markAsUntouched();
+    this.invoiceOpen.set(true);
+  }
+
+  protected closeInvoice(): void {
+    this.invoiceOpen.set(false);
+    this.invoiceError.set(null);
+  }
+
+  protected issueInvoice(sale: Sale): void {
+    this.invoiceForm.markAllAsTouched();
+
+    if (this.invoiceForm.invalid) {
+      return;
+    }
+
+    const raw = this.invoiceForm.getRawValue();
+
+    if (raw.invoiceType === 'CCF' && sale.customer === null) {
+      this.invoiceError.set('La factura CCF requiere un cliente registrado en la venta.');
+      return;
+    }
+
+    this.invoiceSaving.set(true);
+    this.invoiceError.set(null);
+
+    this.invoicesService.create(sale.id, raw, sale.paymentCondition).subscribe({
+      next: (invoice) => {
+        this.invoiceSaving.set(false);
+        this.invoiceOpen.set(false);
+        this.sale.update((current) =>
+          current === null
+            ? current
+            : { ...current, invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber },
+        );
+        this.toast.success(
+          'Factura emitida',
+          `${invoice.invoiceNumber} se generó desde ${sale.saleNumber}.`,
+        );
+      },
+      error: (error: unknown) => {
+        this.invoiceSaving.set(false);
+        this.invoiceError.set(
+          readApiError(
+            error,
+            'No se pudo emitir la factura. Verifica que la venta esté confirmada y sin factura previa.',
+          ),
         );
       },
     });

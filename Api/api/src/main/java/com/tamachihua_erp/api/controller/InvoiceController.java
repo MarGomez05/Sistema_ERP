@@ -7,6 +7,7 @@ import com.tamachihua_erp.api.dto.billing.InvoiceSummaryDto;
 import com.tamachihua_erp.api.dto.billing.PaymentRequestDto;
 import com.tamachihua_erp.api.dto.billing.PaymentResponseDto;
 import com.tamachihua_erp.api.dto.common.PageResponseDto;
+import com.tamachihua_erp.api.service.InvoicePdfService;
 import com.tamachihua_erp.api.service.InvoiceService;
 
 import jakarta.validation.Valid;
@@ -17,6 +18,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,6 +28,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.util.List;
 
@@ -34,6 +39,7 @@ import java.util.List;
 public class InvoiceController {
 
     private final InvoiceService service;
+    private final InvoicePdfService pdfService;
 
     @GetMapping
     public ResponseEntity<PageResponseDto<InvoiceSummaryDto>> findAll(
@@ -104,6 +110,25 @@ public class InvoiceController {
         return ResponseEntity.ok(service.findPayments(id));
     }
 
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<byte[]> downloadPdf(@PathVariable Long id) {
+
+        InvoiceResponseDto invoice = service.findById(id);
+        byte[] pdf = pdfService.render(invoice);
+
+        String filename = "factura-" + safeFilename(invoice.invoiceNumber()) + ".pdf";
+
+        ContentDisposition disposition = ContentDisposition.attachment()
+                .filename(filename, StandardCharsets.UTF_8)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, disposition.toString())
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(pdf.length)
+                .body(pdf);
+    }
+
     @PostMapping("/{id}/credit-note")
     public ResponseEntity<InvoiceResponseDto> issueCreditNote(
             @PathVariable Long id,
@@ -130,5 +155,14 @@ public class InvoiceController {
         }
 
         return userId.longValue();
+    }
+
+    private String safeFilename(String value) {
+
+        if (value == null || value.isBlank()) {
+            return "sin-numero";
+        }
+
+        return value.replaceAll("[^A-Za-z0-9._-]", "-");
     }
 }

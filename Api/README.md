@@ -75,6 +75,7 @@ No se crean paquetes raíz por funcionalidad (`customer/`, `sale/`, etc.).
 | Lombok | Reducción de código repetitivo |
 | Bean Validation | Validación de entrada |
 | springdoc OpenAPI | Swagger UI |
+| Apache PDFBox | Generación de facturas en PDF |
 | JUnit 5 + Testcontainers + MockMvc | Pruebas |
 
 ## 3. Arquitectura
@@ -231,7 +232,7 @@ Patrón CRUD: `GET` paginado, `GET /options`, `GET /{id}`, `POST`, `PUT /{id}` y
 
 Clientes: `GET` incluye `outstandingBalance` (facturas `ISSUED`, `total - paid_total`); el listado resuelve los saldos con una consulta agregada.
 
-Ventas: `GET` con filtros `from`, `to`, `customerId`, `status` y `userId`; `POST` y `PUT` solo en `DRAFT`; `confirm` consume stock vendible en orden FEFO con bloqueo pesimista; `cancel` devuelve stock y exige que no exista factura emitida. El `saleNumber` se genera con `document_sequences` (`V-AAAA-NNNNNN`).
+Ventas: `GET` con filtros `from`, `to`, `customerId`, `status` y `userId`; `POST` y `PUT` solo en `DRAFT`; `confirm` consume stock vendible en orden FEFO con bloqueo pesimista; `cancel` devuelve stock y exige que no exista factura emitida. El `saleNumber` se genera con `document_sequences` (`V-AAAA-NNNNNN`). El listado y el detalle incluyen `invoiceId` e `invoiceNumber` (nulos si la venta no está facturada) para que el cliente muestre el estado de facturación sin consultas adicionales.
 
 Imágenes: las presentaciones exponen `imageUrl` e `imageAlt`. `PUT /api/products/{productId}/presentations/{id}/image` asigna o quita la imagen por referencia (`http://`, `https://` o ruta relativa con `/`); una URL vacía la elimina. No se suben binarios a PostgreSQL; la carga `multipart` con almacenamiento local/S3 queda pendiente.
 
@@ -247,14 +248,16 @@ Endpoints:
 ```text
 GET  /api/invoices
 GET  /api/invoices/{id}
+GET  /api/invoices/{id}/pdf
 POST /api/invoices
-POST /api/sales/{id}/invoice
 POST /api/invoices/{id}/payments
 GET  /api/invoices/{id}/payments
 POST /api/invoices/{id}/credit-note
 ```
 
 Facturación: la factura se emite solo desde una venta `CONFIRMED` y sin factura previa. Guarda snapshot del cliente y de las líneas, usa `document_sequences` (`F-AAAA-NNNNNN` o `CCF-AAAA-NNNNNN`) y calcula `dueDate` en crédito. Los pagos actualizan `paidTotal` y no pueden superar el total. La nota de crédito solo la emite `ADMIN`; referencia la factura original, la cancela junto con la venta y devuelve stock solo si `returnStock = true`.
+
+PDF: `GET /api/invoices/{id}/pdf` (ADMIN, PURCHASING y SELLER) genera el documento con PDFBox a partir del snapshot inmutable. Incluye encabezado fiscal de la empresa, cliente, líneas, totales, pagos, saldo y datos de cancelación o nota de crédito. Los datos de la empresa se configuran en `app.company.*` (`COMPANY_NAME`, `COMPANY_NIT`, `COMPANY_NRC`, `COMPANY_ADDRESS`, `COMPANY_PHONE`, `COMPANY_EMAIL`).
 
 ### 7.3 Retirados
 

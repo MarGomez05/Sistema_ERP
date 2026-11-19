@@ -20,6 +20,8 @@ public record SaleSummaryDto(
         BigDecimal discountTotal,
         BigDecimal taxTotal,
         BigDecimal total,
-        BigDecimal paidTotal
+        BigDecimal paidTotal,
+        Long invoiceId,
+        String invoiceNumber
 ) {
 }

@@ -52,6 +52,8 @@ export interface SaleSummary {
   taxTotal: number;
   total: number;
   paidTotal: number;
+  invoiceId: number | null;
+  invoiceNumber: string | null;
 }
 
 // Venta completa con líneas, notas y datos de cancelación.
@@ -69,6 +71,8 @@ export interface Sale {
   taxTotal: number;
   total: number;
   paidTotal: number;
+  invoiceId: number | null;
+  invoiceNumber: string | null;
   notes: string | null;
   details: SaleLine[];
   cancelledAt: string | null;

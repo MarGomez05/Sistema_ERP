@@ -4,6 +4,7 @@ import com.tamachihua_erp.api.dto.sale.SaleDetailRequestDto;
 import com.tamachihua_erp.api.dto.sale.SaleRequestDto;
 import com.tamachihua_erp.api.dto.sale.SaleResponseDto;
 import com.tamachihua_erp.api.entity.Customer;
+import com.tamachihua_erp.api.entity.Invoice;
 import com.tamachihua_erp.api.entity.Presentation;
 import com.tamachihua_erp.api.entity.Product;
 import com.tamachihua_erp.api.entity.ProductLot;
@@ -17,6 +18,7 @@ import com.tamachihua_erp.api.exception.InsufficientStockException;
 import com.tamachihua_erp.api.exception.ResourceConflictException;
 import com.tamachihua_erp.api.mapper.SaleMapper;
 import com.tamachihua_erp.api.repository.CustomerRepository;
+import com.tamachihua_erp.api.repository.InvoiceRepository;
 import com.tamachihua_erp.api.repository.ProductLotRepository;
 import com.tamachihua_erp.api.repository.ProductPresentationRepository;
 import com.tamachihua_erp.api.repository.ProductPriceRepository;
@@ -53,6 +55,9 @@ class SaleServiceImplTest {
     private SaleRepository saleRepository;
 
     @Mock
+    private InvoiceRepository invoiceRepository;
+
+    @Mock
     private CustomerRepository customerRepository;
 
     @Mock
@@ -76,6 +81,7 @@ class SaleServiceImplTest {
     void setUp() {
         service = new SaleServiceImpl(
                 saleRepository,
+                invoiceRepository,
                 customerRepository,
                 productPresentationRepository,
                 productPriceRepository,
@@ -281,6 +287,27 @@ class SaleServiceImplTest {
         assertThatThrownBy(() -> service.findById(1L, 999L, false))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("No tienes permiso");
+    }
+
+    @Test
+    void exponeLaFacturaEmitidaEnElDetalleDeLaVenta() {
+
+        ProductPresentation presentation =
+                presentation(10L, "Clavo 2 pulgadas", "Caja", "13.00");
+
+        Sale sale = draftSale(presentation, new BigDecimal("1.00"));
+
+        Invoice invoice = new Invoice();
+        invoice.setId(40L);
+        invoice.setInvoiceNumber("F-2026-000001");
+
+        when(saleRepository.findDetailedById(1L)).thenReturn(Optional.of(sale));
+        when(invoiceRepository.findBySaleId(1L)).thenReturn(Optional.of(invoice));
+
+        SaleResponseDto response = service.findById(1L, 2L, false);
+
+        assertThat(response.invoiceId()).isEqualTo(40L);
+        assertThat(response.invoiceNumber()).isEqualTo("F-2026-000001");
     }
 
     @Test
