@@ -77,6 +77,10 @@ export class InvoiceService {
     return this.http.get<InvoicePayment[]>(`${this.invoicesUrl}/${id}/payments`);
   }
 
+  downloadPdf(id: number): Observable<Blob> {
+    return this.http.get(`${this.invoicesUrl}/${id}/pdf`, { responseType: 'blob' });
+  }
+
   issueCreditNote(id: number, value: CreditNoteFormValue): Observable<Invoice> {
     return this.http.post<Invoice>(
       `${this.invoicesUrl}/${id}/credit-note`,

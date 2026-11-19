@@ -36,6 +36,8 @@ function sale(overrides: Partial<Sale> = {}): Sale {
     taxTotal: 13,
     total: 113,
     paidTotal: 0,
+    invoiceId: null,
+    invoiceNumber: null,
     notes: null,
     details: [],
     cancelledAt: null,

@@ -175,6 +175,7 @@ const SKELETON_ROWS = Array.from({ length: 5 });
                   <th scope="col">Pago</th>
                   <th scope="col" class="is-numeric">Total</th>
                   <th scope="col">Estado</th>
+                  <th scope="col">Facturación</th>
                   <th scope="col">Acciones</th>
                 </tr>
               </thead>
@@ -209,6 +210,16 @@ const SKELETON_ROWS = Array.from({ length: 5 });
                       <app-badge [tone]="saleStatusTone(item.status)">
                         {{ saleStatusLabel(item.status) }}
                       </app-badge>
+                    </td>
+                    <td>
+                      @if (item.invoiceId !== null) {
+                        <app-badge tone="success" [dot]="true">Facturada</app-badge>
+                        <a class="sales-invoice" [routerLink]="['/invoices', item.invoiceId]">
+                          {{ item.invoiceNumber }}
+                        </a>
+                      } @else {
+                        <app-badge tone="neutral">Sin facturar</app-badge>
+                      }
                     </td>
                     <td>
                       <div class="sales-actions">
@@ -299,7 +310,7 @@ const SKELETON_ROWS = Array.from({ length: 5 });
     }
 
     .sales-table {
-      min-width: 980px;
+      min-width: 1080px;
     }
 
     .sales-number {
@@ -325,6 +336,21 @@ const SKELETON_ROWS = Array.from({ length: 5 });
     .sales-customer {
       display: block;
       font-weight: var(--weight-medium);
+    }
+
+    .sales-invoice {
+      display: block;
+      margin-top: 4px;
+      color: var(--brand-700);
+      font-size: var(--text-xs);
+      font-weight: var(--weight-semibold);
+      text-decoration: none;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .sales-invoice:hover {
+      text-decoration: underline;
+      text-underline-offset: 3px;
     }
 
     .sales-condition {

@@ -5,6 +5,7 @@ import com.tamachihua_erp.api.dto.sale.SaleRequestDto;
 import com.tamachihua_erp.api.dto.sale.SaleResponseDto;
 import com.tamachihua_erp.api.dto.sale.SaleSummaryDto;
 import com.tamachihua_erp.api.entity.Customer;
+import com.tamachihua_erp.api.entity.Invoice;
 import com.tamachihua_erp.api.entity.ProductLot;
 import com.tamachihua_erp.api.entity.ProductPresentation;
 import com.tamachihua_erp.api.entity.ProductPrice;
@@ -17,6 +18,7 @@ import com.tamachihua_erp.api.exception.ResourceConflictException;
 import com.tamachihua_erp.api.exception.ResourceNotFoundException;
 import com.tamachihua_erp.api.mapper.SaleMapper;
 import com.tamachihua_erp.api.repository.CustomerRepository;
+import com.tamachihua_erp.api.repository.InvoiceRepository;
 import com.tamachihua_erp.api.repository.ProductLotRepository;
 import com.tamachihua_erp.api.repository.ProductPresentationRepository;
 import com.tamachihua_erp.api.repository.ProductPriceRepository;
@@ -43,7 +45,11 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +71,7 @@ public class SaleServiceImpl implements SaleService {
     private static final BigDecimal DEFAULT_TAX_RATE = new BigDecimal("13.00");
 
     private final SaleRepository repository;
+    private final InvoiceRepository invoiceRepository;
     private final CustomerRepository customerRepository;
     private final ProductPresentationRepository productPresentationRepository;
     private final ProductPriceRepository productPriceRepository;
@@ -127,8 +134,10 @@ public class SaleServiceImpl implements SaleService {
             );
         }
 
-        return repository.findAll(specification, pageable)
-                .map(mapper::toSummary);
+        Page<Sale> page = repository.findAll(specification, pageable);
+        Map<Long, Invoice> invoices = invoicesBySale(page.getContent());
+
+        return page.map(sale -> mapper.toSummary(sale, invoices.get(sale.getId())));
     }
 
     @Override
@@ -139,7 +148,9 @@ public class SaleServiceImpl implements SaleService {
 
         assertCanView(sale, requesterId, canViewAll);
 
-        return mapper.toResponse(sale);
+        Invoice invoice = invoiceRepository.findBySaleId(id).orElse(null);
+
+        return mapper.toResponse(sale, invoice);
     }
 
     @Override
@@ -594,6 +605,27 @@ public class SaleServiceImpl implements SaleService {
 
         return detail.getProductPresentation().getProduct().getName()
                 + " (" + detail.getProductPresentation().getPresentation().getName() + ")";
+    }
+
+    private Map<Long, Invoice> invoicesBySale(List<Sale> sales) {
+
+        List<Long> saleIds = sales.stream()
+                .map(Sale::getId)
+                .filter(Objects::nonNull)
+                .toList();
+
+        if (saleIds.isEmpty()) {
+            return Map.of();
+        }
+
+        return invoiceRepository.findBySaleIdIn(saleIds)
+                .stream()
+                .filter(invoice -> invoice.getSale() != null)
+                .collect(Collectors.toMap(
+                        invoice -> invoice.getSale().getId(),
+                        Function.identity(),
+                        (first, ignored) -> first
+                ));
     }
 
     private ResourceNotFoundException saleNotFound(Long id) {

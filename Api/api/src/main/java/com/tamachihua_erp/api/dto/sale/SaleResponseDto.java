@@ -20,6 +20,8 @@ public record SaleResponseDto(
         BigDecimal taxTotal,
         BigDecimal total,
         BigDecimal paidTotal,
+        Long invoiceId,
+        String invoiceNumber,
         String notes,
         List<SaleDetailResponseDto> details,
         LocalDateTime cancelledAt,

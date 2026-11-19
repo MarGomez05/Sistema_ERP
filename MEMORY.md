@@ -2,7 +2,7 @@
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
 > Última actualización: 18/11/2026.
-> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1**; **7.2 completado** con los módulos de **catálogos**, **productos con sus presentaciones**, **precios con historial** y **lotes con corrección de cantidad**, **7.3 completado** con **clientes** (listado, detalle, alta, edición, estado y crédito), **7.4 completado** con **ventas** (listado, alta, edición, detalle, confirmación y cancelación) y **7.5 completado** con **facturación** (emisión, detalle, pagos y nota de crédito), más un sistema de botones con degradado de marca. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 99 pruebas en verde.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1**; **7.2 completado** con los módulos de **catálogos**, **productos con sus presentaciones**, **precios con historial** y **lotes con corrección de cantidad**, **7.3 completado** con **clientes** (listado, detalle, alta, edición, estado y crédito), **7.4 completado** con **ventas** (listado, alta, edición, detalle, confirmación y cancelación) y **7.5 completado** con **facturación** (emisión, detalle, pagos, nota de crédito y PDF), más un sistema de botones con degradado de marca. El precio de línea de venta quedó de solo lectura y el estado de facturación se muestra en ventas. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 99 pruebas en verde.
 
 ## 1. Resumen
 
@@ -237,6 +237,17 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Verificación: `npm run build` en verde (inicial 315.77 kB) y `npm test -- --watch=false` con 99 pruebas en verde (12 nuevas de facturación).
 - Pendiente del entregable 7.5: ninguno. Siguiente: entregable 7.6 (reportes).
 
+### Avance 18/11/2026 — Ajustes de facturación y PDF
+
+- El editor de ventas muestra el precio de cada línea como texto de solo lectura con el icono de candado; solo cantidad y descuento son editables. El costo unitario de lotes se mantiene editable porque proviene de la factura del proveedor.
+- La API de ventas expone `invoiceId` e `invoiceNumber` en `SaleSummaryDto` y `SaleResponseDto`; `SaleServiceImpl` resuelve las facturas del listado con una sola consulta `findBySaleIdIn` para evitar N+1. Una venta sin factura devuelve ambos campos en `null`.
+- El listado `/sales` muestra «Facturada» con enlace a la factura o «Sin facturar»; el detalle muestra la insignia, el enlace y oculta «Facturar» cuando `invoiceId` ya existe. Al emitir, la venta en memoria se actualiza con la factura creada.
+- Se agregó `GET /api/invoices/{id}/pdf` (ADMIN, PURCHASING y SELLER), generado con Apache PDFBox 3.0.8 desde el snapshot inmutable. Incluye encabezado fiscal, cliente, líneas, totales, pagos acumulados, saldo, notas y datos de cancelación o nota de crédito, con paginación y pie de página.
+- Los datos de la empresa se configuran en `app.company.*` (`COMPANY_NAME`, `COMPANY_NIT`, `COMPANY_NRC`, `COMPANY_ADDRESS`, `COMPANY_PHONE`, `COMPANY_EMAIL`); los valores actuales son MARERP S.A. DE C.V., NIT 06852248-1, NRC 123456-7, Lourdes Colón, La Libertad, 2578-2910 y admin@elprogreso.example.
+- El detalle de factura incorpora «Descargar PDF» con nombre `factura-<número>.pdf`, manejo de errores y soporte para notas de crédito.
+- Verificación: backend `compile` y pruebas unitarias de PDF, ventas y facturación en verde; frontend `npm run build` en verde (inicial 315.86 kB) y `npm test -- --watch=false` con 99 pruebas. No se ejecutó la suite completa con Testcontainers porque Docker no está disponible en el entorno.
+- Pendiente: validar la descarga y el PDF con backend y datos reales en navegador.
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -278,7 +289,8 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-24 | Los lotes se consultan en `/lots` con filtros de factura, proveedor, existencia y producto; el alta vive en un panel lateral y la corrección de cantidad en otro. El alta queda para `ADMIN` porque requiere `/api/suppliers/options`; `WAREHOUSE` corrige cantidades y `PURCHASING` consulta con costos en modo lectura | Aplicada |
 | D-25 | Clientes se gestiona en `/customers` y `/customers/:id`; lectura `ADMIN`/`PURCHASING`/`SELLER`, alta y edición `ADMIN`/`SELLER`, estado y crédito solo `ADMIN`. Al crear se envía crédito en cero y el ajuste posterior se hace desde el detalle; el saldo pendiente y el disponible se calculan con `outstandingBalance` de la API | Aplicada |
 | D-26 | Ventas se gestiona en `/sales` con editor de página completa (`/sales/new`, `/sales/:id/edit`) y detalle (`/sales/:id`). La venta se crea en `DRAFT`, el precio se toma del vigente de la presentación y el servidor recalcula base e IVA. Lectura para los cuatro roles, crear/editar/confirmar para `ADMIN`/`SELLER` y cancelar solo `ADMIN`; la confirmación descuenta stock con FEFO | Aplicada |
-| D-27 | Facturación se consulta en `/invoices` y `/invoices/:id` con lectura `ADMIN`/`PURCHASING`/`SELLER`. La emisión se hace desde el detalle de una venta `CONFIRMED` (`ADMIN`/`SELLER`) y no desde el listado. Pagos y nota de crédito viven en paneles laterales exclusivos del detalle; los pagos son `ADMIN`/`SELLER` y la nota de crédito solo `ADMIN`. El vencimiento se calcula visualmente, no cambia el estado del backend. Sin PDF hasta que exista el endpoint | Aplicada |
+| D-27 | Facturación se consulta en `/invoices` y `/invoices/:id` con lectura `ADMIN`/`PURCHASING`/`SELLER`. La emisión se hace desde el detalle de una venta `CONFIRMED` (`ADMIN`/`SELLER`) y no desde el listado. Pagos y nota de crédito viven en paneles laterales exclusivos del detalle; los pagos son `ADMIN`/`SELLER` y la nota de crédito solo `ADMIN`. El vencimiento se calcula visualmente, no cambia el estado del backend. Sin PDF hasta que exista el endpoint | Reemplazada por D-28 |
+| D-28 | El precio de línea de venta es de solo lectura en la web y se toma del precio vigente; el costo unitario de lotes sigue editable porque proviene de la factura del proveedor. `GET /api/invoices/{id}/pdf` genera el documento con Apache PDFBox desde el snapshot y datos de empresa configurables. Las ventas exponen `invoiceId`/`invoiceNumber` para mostrar «Facturada»/«Sin facturar» y ocultar la emisión duplicada | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -432,7 +444,7 @@ npm test -- --watch=false
 - Configurar CI/CD.
 - Frontend: entregables 7.2, 7.3, 7.4 y 7.5 completados (inventario, clientes, ventas y facturación); continuar con el entregable 7.6 (reportes) sobre la base ya creada en `Web/`.
 - Frontend: validar visualmente el rediseño 7.1.1 en navegador con backend y credenciales reales; en el entorno de trabajo no estaban disponibles.
-- Frontend: el detalle de venta no puede precargar la factura existente porque `GET /api/invoices` no filtra por `saleId`; si se intenta facturar de nuevo, se muestra el conflicto del backend. El PDF de factura queda pendiente de endpoint.
+- Frontend: validar en navegador la insignia de facturación y la descarga de PDF con backend y credenciales reales; el entorno no tenía Docker ni PostgreSQL disponibles.
 - Frontend: definir estrategia de despliegue con proxy inverso para `/api`.
 - Regenerar diagramas de arquitectura y clases.
 - Documentación base ya actualizada; falta validarla con el equipo.

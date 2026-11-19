@@ -9,9 +9,9 @@ Sistema de gestión para ferretería y agroservicio. Cubre **inventario** y avan
 - **Flyway implementado**: migraciones `V1`–`V6` en `Api/api/src/main/resources/db/migration/`.
 - **CRUD de clientes implementado** en `/api/customers` con validaciones, saldo pendiente y seguridad por rol.
 - **Ventas implementadas** en `/api/sales`: creación y edición en `DRAFT`, confirmación con FEFO y bloqueo pesimista, cancelación con devolución de stock, numeración `V-AAAA-NNNNNN` y validación de crédito.
-- **Facturación implementada** en `/api/invoices`: emisión desde ventas confirmadas, snapshot inmutable, CCF, pagos con control de saldo y notas de crédito con devolución opcional de stock.
+- **Facturación implementada** en `/api/invoices`: emisión desde ventas confirmadas, snapshot inmutable, CCF, pagos con control de saldo, notas de crédito con devolución opcional de stock y descarga de PDF con datos de la empresa.
 - **Imágenes por URL implementadas**: `imageUrl` e `imageAlt` en presentaciones y `PUT /api/products/{productId}/presentations/{id}/image`; la subida de archivos queda para una fase posterior.
-- **Frontend Angular implementado** en `Web/`: login real, layout responsive, guards por rol, panel general, catálogos e inventario, clientes, ventas y facturación con pagos y notas de crédito. Reportes queda para el entregable 7.6.
+- **Frontend Angular implementado** en `Web/`: login real, layout responsive, guards por rol, panel general, catálogos e inventario, clientes, ventas con estado de facturación y facturación con pagos, notas de crédito y descarga de PDF. Reportes queda para el entregable 7.6.
 - Se retiran los endpoints `/api/app/**` y el encabezado `X-Client-Interface` en el código nuevo.
 
 El plan completo está en [`Implementacion.md`](Implementacion.md). Las decisiones, convenciones y pendientes están en [`MEMORY.md`](MEMORY.md).

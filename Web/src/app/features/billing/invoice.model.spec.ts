@@ -114,6 +114,7 @@ describe('permisos de facturación', () => {
     expect(canCreateInvoice('CONFIRMED', false)).toBe(false);
     expect(canCreateInvoice('DRAFT', true)).toBe(false);
     expect(canCreateInvoice('CANCELLED', true)).toBe(false);
+    expect(canCreateInvoice('CONFIRMED', true, 40)).toBe(false);
   });
 
   it('permite pagos solo sobre facturas emitidas con saldo', () => {

@@ -15,7 +15,6 @@ import { ToastService } from '@core/ui/toast.service';
 import { InvoiceService } from '@features/billing/invoice.service';
 import {
   ISSUED_INVOICE_TYPE_OPTIONS,
-  Invoice,
   IssuedInvoiceType,
   canCreateInvoice,
 } from '@features/billing/invoice.model';
@@ -102,7 +101,7 @@ import { SaleService } from '../sale.service';
             }
           }
 
-          @if (canInvoice(current) && !invoiceOpen() && issuedInvoice() === null) {
+          @if (canInvoice(current) && !invoiceOpen()) {
             <button appButton type="button" (click)="openInvoice(current)">
               <app-icon name="receipt" [size]="16" />
               Facturar
@@ -145,7 +144,12 @@ import { SaleService } from '../sale.service';
                 <h2 id="sale-overview-title" class="panel__title">Información de la venta</h2>
                 <p class="panel__subtitle">Cliente, vendedor y condiciones registradas.</p>
               </div>
-              <app-badge [tone]="statusTone(current)">{{ statusLabel(current) }}</app-badge>
+              <div class="detail-badges">
+                <app-badge [tone]="statusTone(current)">{{ statusLabel(current) }}</app-badge>
+                @if (current.invoiceId !== null) {
+                  <app-badge tone="success" [dot]="true">Facturada</app-badge>
+                }
+              </div>
             </div>
 
             <div class="panel__body">
@@ -182,6 +186,16 @@ import { SaleService } from '../sale.service';
                   <dt>Método de pago</dt>
                   <dd>{{ methodLabel(current) }}</dd>
                 </div>
+                @if (current.invoiceId !== null) {
+                  <div>
+                    <dt>Factura</dt>
+                    <dd>
+                      <a class="detail-link" [routerLink]="['/invoices', current.invoiceId]">
+                        {{ current.invoiceNumber }}
+                      </a>
+                    </dd>
+                  </div>
+                }
                 <div class="detail-meta__wide">
                   <dt>Notas</dt>
                   <dd>{{ current.notes ?? 'Sin notas registradas.' }}</dd>
@@ -306,15 +320,15 @@ import { SaleService } from '../sale.service';
             }
           </section>
 
-          @if (issuedInvoice(); as invoice) {
+          @if (current.invoiceId !== null) {
             <section class="invoice-card invoice-card--success" aria-labelledby="sale-invoice-done">
-              <h2 id="sale-invoice-done" class="invoice-card__title">Factura emitida</h2>
+              <h2 id="sale-invoice-done" class="invoice-card__title">Venta facturada</h2>
               <p class="invoice-card__text">
-                {{ invoice.invoiceNumber }} por {{ formatMoney(invoice.total) }}. Los pagos se
+                {{ current.invoiceNumber }} por {{ formatMoney(current.total) }}. Los pagos se
                 registran desde el detalle de la factura.
               </p>
               <div class="invoice-card__actions">
-                <a appButton [routerLink]="['/invoices', invoice.id]">
+                <a appButton [routerLink]="['/invoices', current.invoiceId]">
                   <app-icon name="receipt" [size]="16" />
                   Ver factura
                 </a>
@@ -472,6 +486,13 @@ import { SaleService } from '../sale.service';
       flex-wrap: wrap;
       align-items: center;
       gap: var(--space-3);
+    }
+
+    .detail-badges {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 6px;
     }
 
     .detail-confirm {
@@ -831,7 +852,6 @@ export class SaleDetailComponent implements OnInit {
   protected readonly invoiceOpen = signal(false);
   protected readonly invoiceSaving = signal(false);
   protected readonly invoiceError = signal<string | null>(null);
-  protected readonly issuedInvoice = signal<Invoice | null>(null);
 
   protected readonly invoiceForm = this.formBuilder.nonNullable.group({
     invoiceType: this.formBuilder.nonNullable.control<IssuedInvoiceType>('CONSUMER', [
@@ -915,7 +935,7 @@ export class SaleDetailComponent implements OnInit {
   }
 
   protected canInvoice(sale: Sale): boolean {
-    return canCreateInvoice(sale.status, this.auth.canAccess(['ADMIN', 'SELLER']));
+    return canCreateInvoice(sale.status, this.auth.canAccess(['ADMIN', 'SELLER']), sale.invoiceId);
   }
 
   protected invoiceTypeHint(sale: Sale): string {
@@ -1005,6 +1025,10 @@ export class SaleDetailComponent implements OnInit {
   }
 
   protected openInvoice(sale: Sale): void {
+    if (sale.invoiceId !== null) {
+      return;
+    }
+
     this.invoiceError.set(null);
     this.invoiceForm.reset({
       invoiceType: sale.customer === null ? 'CONSUMER' : 'CCF',
@@ -1042,7 +1066,11 @@ export class SaleDetailComponent implements OnInit {
       next: (invoice) => {
         this.invoiceSaving.set(false);
         this.invoiceOpen.set(false);
-        this.issuedInvoice.set(invoice);
+        this.sale.update((current) =>
+          current === null
+            ? current
+            : { ...current, invoiceId: invoice.id, invoiceNumber: invoice.invoiceNumber },
+        );
         this.toast.success(
           'Factura emitida',
           `${invoice.invoiceNumber} se generó desde ${sale.saleNumber}.`,

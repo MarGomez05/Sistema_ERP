@@ -2,7 +2,7 @@
 
 Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre autenticación, layout, navegación por rol, panel general, catálogos e inventario, clientes, ventas con confirmación FEFO y cancelación, y facturación con pagos y notas de crédito.
 
-> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**; **7.5 completado** (18/11/2026) con **facturación, pagos y notas de crédito**. Reportes se incorpora en el entregable 7.6.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**; **7.5 completado** (18/11/2026) con **facturación, pagos, notas de crédito y descarga de PDF**, incluido el estado de facturación en ventas. Reportes se incorpora en el entregable 7.6.
 
 ---
 
@@ -182,7 +182,7 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - Listado `/sales` con filtros por rango de fechas, cliente y estado (`DRAFT`, `CONFIRMED`, `CANCELLED`), paginación y contador. `SELLER` solo ve sus propias ventas; el backend aplica esa visibilidad.
 - Cada fila muestra número y fecha, cliente, vendedor, condición de pago, total, estado lógico y accesos a detalle y edición cuando la venta está en borrador.
 - Editor `/sales/new` y `/sales/:id/edit` restringido a `ADMIN` y `SELLER`: cliente opcional (consumidor final), condición de pago contado/crédito, método de pago, notas y líneas por presentación.
-- La búsqueda de productos usa `GET /api/products` con solo activos; al elegir un producto se cargan sus presentaciones con precio vigente y stock, y se agrega la presentación como línea con cantidad, precio y descuento editables.
+- La búsqueda de productos usa `GET /api/products` con solo activos; al elegir un producto se cargan sus presentaciones con precio vigente y stock, y se agrega la presentación como línea con cantidad y descuento editables. El precio es de solo lectura y se toma del catálogo, de modo que no puede alterarse desde la venta.
 - El resumen calcula el total y los descuentos en vivo; el servidor recalcula base imponible e IVA al guardar. La venta creada o editada queda en `DRAFT`.
 - Con un cliente seleccionado se muestra su límite, saldo y disponible; para ventas a crédito se advierte si no hay días configurados o si el total supera el crédito disponible (la validación definitiva ocurre al confirmar).
 - Detalle `/sales/:id` con cliente, vendedor, condiciones, notas, líneas con IVA y totales (subtotal, descuentos, IVA, total, pagado y saldo pendiente).
@@ -194,14 +194,15 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 ### Facturación (7.5 completado)
 
 - Listado `/invoices` con filtros por rango de fechas de emisión, cliente, tipo (`CONSUMER`, `CCF`, `CREDIT_NOTE`), estado (`ISSUED`, `CANCELLED`, `DRAFT`), paginación y contador. Cada fila muestra número y fecha, cliente, venta asociada, tipo, condición de pago, vencimiento con marca «Vencida», total, saldo, estado y acceso al detalle.
-- La emisión se realiza desde el detalle de una venta `CONFIRMED` con el panel «Facturar» (`ADMIN`/`SELLER`): tipo consumidor final o CCF, número de control opcional y notas. La condición de pago se copia de la venta y el cliente, las líneas y los totales quedan congelados como snapshot inmutable. `CCF` exige cliente registrado; si la venta ya tiene factura, se muestra el mensaje de conflicto del backend.
+- La emisión se realiza desde el detalle de una venta `CONFIRMED` con el panel «Facturar» (`ADMIN`/`SELLER`): tipo consumidor final o CCF, número de control opcional y notas. La condición de pago se copia de la venta y el cliente, las líneas y los totales quedan congelados como snapshot inmutable. `CCF` exige cliente registrado.
+- El listado de ventas muestra una insignia «Facturada» con el número de factura y enlace a su detalle, o «Sin facturar» cuando todavía no existe documento. El detalle de la venta expone la misma información y oculta «Facturar» cuando la venta ya fue facturada, para evitar el error de emisión duplicada.
 - El listado enlaza a `/sales?status=CONFIRMED` para localizar ventas pendientes de facturar; el filtro de estado de ventas se sincroniza con la URL.
 - El detalle `/invoices/:id` concentra los datos fiscales del snapshot, las líneas facturadas, el historial de pagos y los totales (subtotal, descuentos, IVA, total, pagado y saldo), con avisos de factura pagada, vencida, cancelada o nota de crédito.
 - Registro de pagos en panel lateral exclusivo (`ADMIN`/`SELLER`): fecha no futura, monto mayor que cero y sin superar el saldo, método (`CASH`, `CARD`, `TRANSFER`, `CHECK`, `OTHER`), referencia ≤ 50 y notas ≤ 255. Al guardar se refrescan el saldo y el historial.
 - Nota de crédito en panel lateral exclusivo (solo `ADMIN`): motivo obligatorio ≤ 255 y casilla para devolver stock a los lotes. Anula la factura original y la venta asociada; tras emitirla se muestra la nueva nota con enlace a la factura relacionada.
 - Lectura para `ADMIN`, `PURCHASING` y `SELLER`; emisión y pagos para `ADMIN` y `SELLER`; nota de crédito solo `ADMIN`, conforme a `SecurityConfig`. `PURCHASING` opera en modo lectura.
 - `invoice.model.ts` centraliza etiquetas y tonos, saldo, vencimiento visual (el estado del backend no cambia al vencer), permisos y payloads con recorte, redondeo y conversión de vacíos a `null`.
-- El PDF de la factura (`GET /api/invoices/{id}/pdf`) corresponde a una fase posterior y no se ofrece todavía.
+- El detalle de factura ofrece «Descargar PDF» (`GET /api/invoices/{id}/pdf`). El archivo se descarga como `factura-<número>.pdf` con encabezado fiscal de la empresa, snapshot del cliente, líneas, totales, pagos acumulados, saldo y datos de cancelación o nota de crédito. La descarga maneja errores con un aviso y funciona también para notas de crédito.
 
 ---
 
@@ -389,8 +390,8 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 - `PURCHASING` consulta clientes, saldo y crédito en modo lectura.
 - `SELLER` solo ve sus propias ventas; `WAREHOUSE` y `PURCHASING` consultan el historial completo sin crear, editar, confirmar ni cancelar. Cancelar una venta queda reservado a `ADMIN`.
 - El listado de ventas filtra por fechas, cliente y estado porque la API no expone búsqueda por número de venta.
-- La emisión de factura se hace desde el detalle de una venta confirmada; no hay formulario de emisión suelto en el listado. Si la venta ya fue facturada, el intento se rechaza con el mensaje del backend porque la API no expone una consulta de factura por venta.
-- La API no implementa `GET /api/invoices/{id}/pdf`; la interfaz no ofrece descarga ni impresión de facturas.
+- La emisión de factura se hace desde el detalle de una venta confirmada; no hay formulario de emisión suelto en el listado. El listado y el detalle de venta consultan `invoiceId`/`invoiceNumber` para ocultar la emisión cuando la venta ya está facturada.
+- El PDF se genera en el backend con Apache PDFBox y se descarga como archivo; la interfaz no abre una vista imprimible previa.
 - El vencimiento de las facturas a crédito se calcula visualmente con `dueDate`; el estado del backend no cambia a «vencida» y el filtro de estado solo admite `DRAFT`, `ISSUED` y `CANCELLED`.
 - `PURCHASING` consulta facturas y pagos en modo lectura; no emite facturas, no registra pagos ni emite notas de crédito.
 - El filtro por cliente del listado de ventas y el alta requieren `/api/customers/options`, disponible para `ADMIN` y `SELLER`.

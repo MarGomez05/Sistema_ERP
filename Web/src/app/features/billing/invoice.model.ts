@@ -240,8 +240,12 @@ export function isInvoiceOverdue(
   return invoiceBalance(invoice) > 0 && invoice.dueDate < today;
 }
 
-export function canCreateInvoice(saleStatus: string, canWrite: boolean): boolean {
-  return canWrite && saleStatus === 'CONFIRMED';
+export function canCreateInvoice(
+  saleStatus: string,
+  canWrite: boolean,
+  invoiceId: number | null = null,
+): boolean {
+  return canWrite && saleStatus === 'CONFIRMED' && invoiceId === null;
 }
 
 export function canRegisterPayment(

@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import {
   ChangeDetectionStrategy,
   Component,
@@ -75,6 +76,17 @@ type DetailPanel = 'payment' | 'creditNote';
               Ver venta
             </a>
           }
+
+          <button
+            appButton
+            type="button"
+            variant="secondary"
+            [loading]="pdfLoading()"
+            (click)="downloadPdf(current)"
+          >
+            <app-icon name="download" [size]="16" />
+            Descargar PDF
+          </button>
 
           @if (canPay(current) && activePanel() === null) {
             <button appButton type="button" (click)="openPayment()">
@@ -670,6 +682,7 @@ export class InvoiceDetailComponent implements OnInit {
   private readonly invoices = inject(InvoiceService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly documentRef = inject(DOCUMENT);
 
   private invoiceId = 0;
 
@@ -681,6 +694,7 @@ export class InvoiceDetailComponent implements OnInit {
   protected readonly paymentsError = signal<string | null>(null);
 
   protected readonly activePanel = signal<DetailPanel | null>(null);
+  protected readonly pdfLoading = signal(false);
   protected readonly paymentSaving = signal(false);
   protected readonly paymentError = signal<string | null>(null);
   protected readonly creditNoteSaving = signal(false);
@@ -789,6 +803,34 @@ export class InvoiceDetailComponent implements OnInit {
 
   protected canCredit(invoice: Invoice): boolean {
     return canIssueCreditNote(invoice, this.isAdmin());
+  }
+
+  protected downloadPdf(invoice: Invoice): void {
+    this.pdfLoading.set(true);
+
+    this.invoices.downloadPdf(invoice.id).subscribe({
+      next: (blob) => {
+        this.pdfLoading.set(false);
+
+        const url = URL.createObjectURL(blob);
+        const link = this.documentRef.createElement('a');
+
+        link.href = url;
+        link.download = `${invoice.invoiceNumber.replace(/[^A-Za-z0-9._-]/g, '-')}.pdf`;
+        link.style.display = 'none';
+        this.documentRef.body.appendChild(link);
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      },
+      error: (error: unknown) => {
+        this.pdfLoading.set(false);
+        this.toast.error(
+          'No se pudo descargar el PDF',
+          readApiError(error, 'Verifica que la factura exista e intenta nuevamente.'),
+        );
+      },
+    });
   }
 
   protected openPayment(): void {

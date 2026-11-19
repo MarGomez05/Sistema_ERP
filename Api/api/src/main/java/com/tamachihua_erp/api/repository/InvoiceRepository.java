@@ -12,6 +12,8 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 // Facturas y notas de crédito (V4, contrato §12).
@@ -45,4 +47,8 @@ public interface InvoiceRepository
     boolean existsByControlNumber(String controlNumber);
 
     Optional<Invoice> findBySaleId(Long saleId);
+
+    // Facturas de varias ventas en una sola consulta para el listado.
+    @Query("select i from Invoice i where i.sale.id in :saleIds")
+    List<Invoice> findBySaleIdIn(@Param("saleIds") Collection<Long> saleIds);
 }

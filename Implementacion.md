@@ -329,7 +329,7 @@ Visibilidad: `SELLER` solo ve sus propias ventas; `ADMIN` ve todas.
 | `POST /api/invoices/{id}/payments` | ADMIN, SELLER | Registrar pago |
 | `GET /api/invoices/{id}/payments` | ADMIN, PURCHASING, SELLER | Historial de pagos |
 | `POST /api/invoices/{id}/credit-note` | ADMIN | Emitir nota de crédito y cancelar factura |
-| `GET /api/invoices/{id}/pdf` | ADMIN, SELLER | Fase posterior |
+| `GET /api/invoices/{id}/pdf` | ADMIN, PURCHASING, SELLER | Descargar factura o nota de crédito en PDF |
 
 ### 6.4 Imágenes
 
@@ -479,7 +479,7 @@ Web/
 - Catálogos y productos.
 - Clientes.
 - Ventas: listado, nueva venta, detalle, confirmar/cancelar.
-- Facturación: listado, detalle, pagos, nota de crédito.
+- Facturación: listado, detalle, pagos, nota de crédito y descarga de PDF.
 - Inventario: lotes y dashboard.
 
 ### 9.4 Entregable 7.1 — Base del frontend
@@ -613,6 +613,17 @@ Implementado el 18/11/2026:
 - Pruebas nuevas en `invoice.model.spec.ts` (12). Verificación: `npm run build` en verde (inicial 315.77 kB) y `npm test -- --watch=false` con 99 pruebas en verde.
 - Entregable 7.5 completado. Siguiente: entregable 7.6 (reportes).
 
+### 9.13 Ajustes de facturación y PDF
+
+Implementado el 18/11/2026:
+
+- La línea de venta muestra el precio como texto de solo lectura con icono de candado; cantidad y descuento siguen editables. El costo unitario de lotes permanece editable porque se captura de la factura del proveedor.
+- La API de ventas expone `invoiceId` e `invoiceNumber` en listado y detalle, resueltos con una consulta por lote para evitar N+1. El listado muestra «Facturada» con enlace al documento o «Sin facturar»; el detalle resalta la insignia, enlaza la factura y oculta «Facturar» si ya existe.
+- `GET /api/invoices/{id}/pdf` genera el documento con Apache PDFBox 3.0.8 desde el snapshot: encabezado fiscal de la empresa, cliente, líneas, totales, pagos, saldo, notas, cancelación o nota de crédito, con paginación y pie de página.
+- Datos de empresa configurables en `app.company.*` y variables `COMPANY_NAME`, `COMPANY_NIT`, `COMPANY_NRC`, `COMPANY_ADDRESS`, `COMPANY_PHONE` y `COMPANY_EMAIL`.
+- El detalle de factura añade «Descargar PDF» con nombre `factura-<número>.pdf`, manejo de errores y soporte para notas de crédito.
+- Verificación: backend `compile` y pruebas unitarias de PDF, ventas y facturación en verde; frontend con build en verde (315.86 kB) y 99 pruebas. La suite completa con Testcontainers no se ejecutó por falta de Docker.
+
 ## 10. Testing y CI/CD
 
 ### 10.1 Backend
@@ -713,7 +724,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones, precios con historial y lotes completados (17/11/2026); 7.3 clientes completado (17/11/2026); 7.4 ventas completado (17/11/2026); 7.5 facturación, pagos y nota de crédito completado (18/11/2026); entregable 7.6 pendiente |
+| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones, precios con historial y lotes completados (17/11/2026); 7.3 clientes completado (17/11/2026); 7.4 ventas completado (17/11/2026); 7.5 facturación, pagos, nota de crédito y PDF completado (18/11/2026); entregable 7.6 pendiente |
 | 8 | Reportes | Pendiente |
 | 9 | Endurecimiento | Pendiente |
 
@@ -750,7 +761,7 @@ Detalle de la Fase 4:
 Detalle de la Fase 5:
 
 - Implementación por capas: `controller/InvoiceController`, `service/InvoiceService` + `service/impl/InvoiceServiceImpl`, `repository/InvoiceRepository`, `repository/InvoicePaymentRepository`, `entity/Invoice`, `entity/InvoiceDetail`, `entity/InvoicePayment`, `mapper/InvoiceMapper` y DTO en `dto/billing/`.
-- Endpoints: `GET /api/invoices`, `GET /api/invoices/{id}`, `POST /api/invoices`, `POST /api/invoices/{id}/payments`, `GET /api/invoices/{id}/payments`, `POST /api/invoices/{id}/credit-note` y `POST /api/sales/{id}/invoice`.
+- Endpoints: `GET /api/invoices`, `GET /api/invoices/{id}`, `GET /api/invoices/{id}/pdf`, `POST /api/invoices`, `POST /api/invoices/{id}/payments`, `GET /api/invoices/{id}/payments`, `POST /api/invoices/{id}/credit-note` y `POST /api/sales/{id}/invoice`.
 - Emisión solo desde una venta `CONFIRMED` y sin factura previa; bloqueo pesimista sobre la venta y número generado con `document_sequences` (`F-` para consumidor, `CCF-` para crédito fiscal).
 - Snapshot inmutable del cliente y de las líneas (código y nombre de producto/presentación, precio, descuento, IVA e importes); el costo promedio del lote se guarda para uso interno y no se expone.
 - `paymentCondition` de la factura debe coincidir con la venta; en crédito, `dueDate = issueDate + customer.creditDays` (mínimo 1 día).

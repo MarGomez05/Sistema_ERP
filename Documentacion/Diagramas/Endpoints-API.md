@@ -475,6 +475,8 @@ lineSubtotal = lineTotal / (1 + taxRate / 100)
 taxAmount    = lineTotal − lineSubtotal
 ```
 
+El listado y el detalle incluyen `invoiceId` e `invoiceNumber`; ambos son `null` cuando la venta aún no tiene factura. El cliente web usa estos campos para mostrar «Facturada» o «Sin facturar» y para ocultar la emisión cuando ya existe un documento.
+
 **SaleResponse (extracto)**
 
 ```json
@@ -486,6 +488,7 @@ taxAmount    = lineTotal − lineSubtotal
   "paymentCondition": "CREDIT", "paymentMethod": null,
   "subtotal": 100.00, "discountTotal": 0.00, "taxTotal": 13.00,
   "total": 113.00, "paidTotal": 0.00,
+  "invoiceId": 40, "invoiceNumber": "CCF-2026-000040",
   "details": [
     {
       "id": 501, "productPresentationId": 31, "productName": "Clavo 2 pulgadas",
@@ -520,7 +523,7 @@ taxAmount    = lineTotal − lineSubtotal
 | `POST /api/invoices/{id}/payments` | ADMIN, SELLER | Registrar pago |
 | `GET /api/invoices/{id}/payments` | ADMIN, PURCHASING, SELLER | Historial de pagos |
 | `POST /api/invoices/{id}/credit-note` | ADMIN | Emitir nota de crédito |
-| `GET /api/invoices/{id}/pdf` | ADMIN, SELLER | Fase posterior |
+| `GET /api/invoices/{id}/pdf` | ADMIN, PURCHASING, SELLER | Descarga la factura o nota de crédito en PDF |
 
 ### 12.1 Emitir factura
 
@@ -586,7 +589,16 @@ La suma de pagos no puede superar el total de la factura (409). Actualiza `paidT
 - Devuelve stock a los lotes solo si `returnStock = true` y la venta estaba confirmada.
 - Genera número con la secuencia `CREDIT_NOTE`.
 
-### 12.4 Inmutabilidad
+### 12.4 Descargar PDF
+
+`GET /api/invoices/{id}/pdf` responde `application/pdf` con `Content-Disposition: attachment; filename="factura-<número>.pdf"`.
+
+- Incluye encabezado fiscal de la empresa, datos del cliente, líneas, totales, pagos acumulados y saldo.
+- En notas de crédito señala la factura relacionada; en documentos anulados muestra fecha y motivo.
+- La empresa se configura con `app.company.name`, `nit`, `nrc`, `address`, `phone` y `email`; en despliegue se sobreescriben con `COMPANY_NAME`, `COMPANY_NIT`, `COMPANY_NRC`, `COMPANY_ADDRESS`, `COMPANY_PHONE` y `COMPANY_EMAIL`.
+- El PDF se arma con el snapshot inmutable de la factura, no con los datos actuales del cliente.
+
+### 12.5 Inmutabilidad
 
 Una factura `ISSUED` no se edita ni se elimina. Los cambios se hacen con nota de crédito. Toda cancelación guarda usuario, fecha y motivo.
 
@@ -613,7 +625,7 @@ Una factura `ISSUED` no se edita ni se elimina. Los cambios se hacen con nota de
 |---|---|---|
 | P-01 | Formato exacto de NIT/NRC para clientes | Validar con el PO |
 | P-02 | ¿La nota de crédito devuelve stock siempre o solo con confirmación? | Resuelto: `returnStock` explícito (D-16) |
-| P-03 | ¿Se requiere PDF de factura en esta etapa? | Fase posterior |
+| P-03 | ¿Se requiere PDF de factura en esta etapa? | Resuelto: `GET /api/invoices/{id}/pdf` implementado |
 | P-04 | ¿El cliente "Consumidor Final" es registro o `customer_id` nulo? | Nulo por ahora |
 | P-05 | ¿Se requiere retención o percepción? | Fuera de alcance inicial |
 | P-06 | Formato de correlativos fiscales | Confirmar con contabilidad |

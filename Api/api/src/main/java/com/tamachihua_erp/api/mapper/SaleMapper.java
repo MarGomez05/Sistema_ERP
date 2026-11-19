@@ -5,6 +5,7 @@ import com.tamachihua_erp.api.dto.sale.SaleDetailResponseDto;
 import com.tamachihua_erp.api.dto.sale.SaleResponseDto;
 import com.tamachihua_erp.api.dto.sale.SaleSellerDto;
 import com.tamachihua_erp.api.dto.sale.SaleSummaryDto;
+import com.tamachihua_erp.api.entity.Invoice;
 import com.tamachihua_erp.api.entity.ProductPresentation;
 import com.tamachihua_erp.api.entity.Sale;
 import com.tamachihua_erp.api.entity.SaleDetail;
@@ -17,6 +18,11 @@ import java.util.List;
 public class SaleMapper {
 
     public SaleSummaryDto toSummary(Sale sale) {
+
+        return toSummary(sale, null);
+    }
+
+    public SaleSummaryDto toSummary(Sale sale, Invoice invoice) {
 
         return new SaleSummaryDto(
                 sale.getId(),
@@ -33,11 +39,18 @@ public class SaleMapper {
                 sale.getDiscountTotal(),
                 sale.getTaxTotal(),
                 sale.getTotal(),
-                sale.getPaidTotal()
+                sale.getPaidTotal(),
+                invoice != null ? invoice.getId() : null,
+                invoice != null ? invoice.getInvoiceNumber() : null
         );
     }
 
     public SaleResponseDto toResponse(Sale sale) {
+
+        return toResponse(sale, null);
+    }
+
+    public SaleResponseDto toResponse(Sale sale, Invoice invoice) {
 
         SaleCustomerDto customer = sale.getCustomer() == null
                 ? null
@@ -70,6 +83,8 @@ public class SaleMapper {
                 sale.getTaxTotal(),
                 sale.getTotal(),
                 sale.getPaidTotal(),
+                invoice != null ? invoice.getId() : null,
+                invoice != null ? invoice.getInvoiceNumber() : null,
                 sale.getNotes(),
                 details,
                 sale.getCancelledAt(),
