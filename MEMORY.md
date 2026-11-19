@@ -1,8 +1,8 @@
 # MEMORY.md — TAMACHIHUA-ERP
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
-> Última actualización: 17/11/2026.
-> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1**; **7.2 completado** con los módulos de **catálogos**, **productos con sus presentaciones**, **precios con historial** y **lotes con corrección de cantidad**, **7.3 completado** con **clientes** (listado, detalle, alta, edición, estado y crédito) y **7.4 completado** con **ventas** (listado, alta, edición, detalle, confirmación y cancelación), más un sistema de botones con degradado de marca. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 87 pruebas en verde.
+> Última actualización: 18/11/2026.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1**; **7.2 completado** con los módulos de **catálogos**, **productos con sus presentaciones**, **precios con historial** y **lotes con corrección de cantidad**, **7.3 completado** con **clientes** (listado, detalle, alta, edición, estado y crédito), **7.4 completado** con **ventas** (listado, alta, edición, detalle, confirmación y cancelación) y **7.5 completado** con **facturación** (emisión, detalle, pagos y nota de crédito), más un sistema de botones con degradado de marca. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 99 pruebas en verde.
 
 ## 1. Resumen
 
@@ -222,6 +222,21 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Verificación: `npm run build` en verde (inicial 315.52 kB) y `npm test -- --watch=false` con 87 pruebas en verde (15 nuevas de ventas).
 - Pendiente del entregable 7.4: ninguno. Siguiente: entregable 7.5 (facturación).
 
+### Avance 18/11/2026 — Fase 7.5 (Facturación)
+
+- Nuevo módulo `/invoices` (`INVOICES_ROUTES`) con acceso `ADMIN`, `PURCHASING` y `SELLER`; sección «Comercial» ampliada con «Facturación».
+- Listado con filtros por rango de fechas de emisión, cliente, tipo (`CONSUMER`/`CCF`/`CREDIT_NOTE`) y estado (`ISSUED`/`CANCELLED`/`DRAFT`); paginación y contador. Cada fila muestra documento, cliente, venta asociada, tipo, condición, vencimiento con marca «Vencida», total, saldo y estado.
+- La emisión se hace desde el detalle de una venta `CONFIRMED` con el panel «Facturar» (`ADMIN`/`SELLER`): tipo consumidor final o CCF, número de control opcional y notas. Se copia la condición de pago de la venta; `CCF` exige cliente registrado y los conflictos por factura previa muestran el mensaje del backend.
+- El listado enlaza a `/sales?status=CONFIRMED`; el filtro de estado de ventas se lee de la URL y se sincroniza al aplicar/limpiar filtros.
+- Detalle `/invoices/:id` con snapshot fiscal, líneas, historial de pagos y totales (subtotal, descuentos, IVA, total, pagado y saldo), más avisos de pagada, vencida, cancelada o nota de crédito.
+- Pago en panel lateral exclusivo (`ADMIN`/`SELLER`): fecha no futura, monto ≤ saldo, método `CASH`/`CARD`/`TRANSFER`/`CHECK`/`OTHER`, referencia ≤ 50 y notas ≤ 255; al guardar se refrescan saldo e historial.
+- Nota de crédito en panel lateral exclusivo (solo `ADMIN`): motivo obligatorio y devolución de stock opcional; anula factura y venta, y navega a la nueva nota manteniendo el enlace a la factura relacionada.
+- `invoice.model.ts` centraliza etiquetas, tonos, saldo, vencimiento visual, permisos y payloads; `invoice.service.ts` cubre listado, detalle, emisión, pagos y nota de crédito.
+- Permisos reales según `SecurityConfig`: lectura para `ADMIN`/`PURCHASING`/`SELLER`, emisión y pagos para `ADMIN`/`SELLER`, nota de crédito solo `ADMIN`. `PURCHASING` queda en modo lectura.
+- Se centralizaron `parseLocalDate`, `formatDate` y `todayIso` en `shared/util/date.util.ts`; `lot.model.ts` las reexporta para conservar las importaciones existentes.
+- Verificación: `npm run build` en verde (inicial 315.77 kB) y `npm test -- --watch=false` con 99 pruebas en verde (12 nuevas de facturación).
+- Pendiente del entregable 7.5: ninguno. Siguiente: entregable 7.6 (reportes).
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -263,6 +278,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-24 | Los lotes se consultan en `/lots` con filtros de factura, proveedor, existencia y producto; el alta vive en un panel lateral y la corrección de cantidad en otro. El alta queda para `ADMIN` porque requiere `/api/suppliers/options`; `WAREHOUSE` corrige cantidades y `PURCHASING` consulta con costos en modo lectura | Aplicada |
 | D-25 | Clientes se gestiona en `/customers` y `/customers/:id`; lectura `ADMIN`/`PURCHASING`/`SELLER`, alta y edición `ADMIN`/`SELLER`, estado y crédito solo `ADMIN`. Al crear se envía crédito en cero y el ajuste posterior se hace desde el detalle; el saldo pendiente y el disponible se calculan con `outstandingBalance` de la API | Aplicada |
 | D-26 | Ventas se gestiona en `/sales` con editor de página completa (`/sales/new`, `/sales/:id/edit`) y detalle (`/sales/:id`). La venta se crea en `DRAFT`, el precio se toma del vigente de la presentación y el servidor recalcula base e IVA. Lectura para los cuatro roles, crear/editar/confirmar para `ADMIN`/`SELLER` y cancelar solo `ADMIN`; la confirmación descuenta stock con FEFO | Aplicada |
+| D-27 | Facturación se consulta en `/invoices` y `/invoices/:id` con lectura `ADMIN`/`PURCHASING`/`SELLER`. La emisión se hace desde el detalle de una venta `CONFIRMED` (`ADMIN`/`SELLER`) y no desde el listado. Pagos y nota de crédito viven en paneles laterales exclusivos del detalle; los pagos son `ADMIN`/`SELLER` y la nota de crédito solo `ADMIN`. El vencimiento se calcula visualmente, no cambia el estado del backend. Sin PDF hasta que exista el endpoint | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -414,8 +430,9 @@ npm test -- --watch=false
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Ejecutar la suite con Testcontainers cuando haya Docker disponible.
 - Configurar CI/CD.
-- Frontend: entregables 7.2, 7.3 y 7.4 completados (inventario, clientes y ventas); continuar con los entregables 7.5 y 7.6 (facturación y reportes) sobre la base ya creada en `Web/`.
+- Frontend: entregables 7.2, 7.3, 7.4 y 7.5 completados (inventario, clientes, ventas y facturación); continuar con el entregable 7.6 (reportes) sobre la base ya creada en `Web/`.
 - Frontend: validar visualmente el rediseño 7.1.1 en navegador con backend y credenciales reales; en el entorno de trabajo no estaban disponibles.
+- Frontend: el detalle de venta no puede precargar la factura existente porque `GET /api/invoices` no filtra por `saleId`; si se intenta facturar de nuevo, se muestra el conflicto del backend. El PDF de factura queda pendiente de endpoint.
 - Frontend: definir estrategia de despliegue con proxy inverso para `/api`.
 - Regenerar diagramas de arquitectura y clases.
 - Documentación base ya actualizada; falta validarla con el equipo.

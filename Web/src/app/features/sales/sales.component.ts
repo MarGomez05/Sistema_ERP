@@ -6,7 +6,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 
 import { AuthService } from '@core/auth/auth.service';
 import { ToastService } from '@core/ui/toast.service';
@@ -385,6 +385,8 @@ export class SalesComponent implements OnInit {
   private readonly customersService = inject(CustomerService);
   private readonly auth = inject(AuthService);
   private readonly toast = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
 
   protected readonly pageSize = PAGE_SIZE;
   protected readonly skeletonRows = SKELETON_ROWS;
@@ -430,6 +432,13 @@ export class SalesComponent implements OnInit {
   );
 
   ngOnInit(): void {
+    const requestedStatus = this.route.snapshot.queryParamMap.get('status');
+    const match = SALE_STATUS_OPTIONS.find((option) => option.value === requestedStatus);
+
+    if (match) {
+      this.status.set(match.value);
+    }
+
     if (this.canFilterCustomers()) {
       this.loadCustomers();
     }
@@ -492,6 +501,7 @@ export class SalesComponent implements OnInit {
       return;
     }
 
+    this.syncStatusParam();
     this.load(0);
   }
 
@@ -500,6 +510,7 @@ export class SalesComponent implements OnInit {
     this.to.set('');
     this.customerId.set(null);
     this.status.set(null);
+    this.syncStatusParam();
     this.load(0);
   }
 
@@ -535,6 +546,15 @@ export class SalesComponent implements OnInit {
     this.customersService.findOptions().subscribe({
       next: (options) => this.customers.set(options),
       error: () => this.customers.set([]),
+    });
+  }
+
+  // Mantiene el filtro de estado en la URL para enlaces como /sales?status=CONFIRMED.
+  private syncStatusParam(): void {
+    void this.router.navigate([], {
+      relativeTo: this.route,
+      queryParams: { status: this.status() },
+      replaceUrl: true,
     });
   }
 }

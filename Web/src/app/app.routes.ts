@@ -64,6 +64,13 @@ export const routes: Routes = [
         loadChildren: () =>
           import('@features/sales/sales.routes').then((module) => module.SALES_ROUTES),
       },
+      {
+        path: 'invoices',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'PURCHASING', 'SELLER'] },
+        loadChildren: () =>
+          import('@features/billing/invoices.routes').then((module) => module.INVOICES_ROUTES),
+      },
     ],
   },
   {

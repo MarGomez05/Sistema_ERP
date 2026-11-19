@@ -434,7 +434,7 @@ Reglas:
 
 ## 9. Frontend Angular
 
-> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, productos, precios, lotes, clientes y ventas de los entregables 7.2, 7.3 y 7.4 están completos; facturación se agrega en la fase 7.5 sobre esta base.
+> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, productos, precios, lotes, clientes, ventas y facturación de los entregables 7.2 a 7.5 están completos; reportes se agrega en la fase 7.6 sobre esta base.
 
 ### 9.1 Ubicación
 
@@ -451,6 +451,7 @@ Web/
 │       ├── lots/        # consulta de lotes, ingreso y corrección de cantidad
 │       ├── customers/   # listado, detalle, alta, edición, estado y crédito
 │       ├── sales/       # listado, editor, detalle, confirmación y cancelación
+│       ├── billing/     # facturas, detalle, pagos y nota de crédito
 │       ├── dashboard/   # panel general por rol
 │       └── errors/      # 404
 ├── src/styles/          # tokens, base, componentes y utilidades SCSS
@@ -595,6 +596,23 @@ Implementado el 17/11/2026:
 - Pruebas nuevas en `sale.model.spec.ts` (15). Verificación: `npm run build` en verde (inicial 315.52 kB) y `npm test -- --watch=false` con 87 pruebas en verde.
 - Entregable 7.4 completado. Siguiente: entregable 7.5 (facturación).
 
+### 9.12 Entregable 7.5 — Facturación
+
+Implementado el 18/11/2026:
+
+- Rutas `/invoices` y `/invoices/:id` (`INVOICES_ROUTES`) con `roleGuard` para `ADMIN`, `PURCHASING` y `SELLER`; sección «Comercial» ampliada con «Facturación».
+- Listado con `GET /api/invoices`: filtros por rango de fechas de emisión, cliente, tipo y estado; paginación y contador. Cada fila muestra documento, cliente, venta asociada, tipo, condición, vencimiento con marca «Vencida», total, saldo y estado.
+- La emisión se integra al detalle de venta: con una venta `CONFIRMED` y permisos de escritura aparece «Facturar», que abre un panel para elegir consumidor final o CCF, número de control opcional y notas. La condición de pago se copia de la venta y se envía junto al `saleId`; `CCF` exige cliente registrado. Al emitir se muestra el número y un enlace al detalle de la factura.
+- El listado enlaza a `/sales?status=CONFIRMED` para localizar ventas facturables. El listado de ventas lee `status` de la URL y lo sincroniza al aplicar o limpiar filtros.
+- Detalle con snapshot fiscal del cliente, líneas inmutables, historial de pagos y totales. Los avisos distinguen factura pagada, vencida, cancelada, de contado pendiente y nota de crédito.
+- Registro de pagos en panel lateral exclusivo (`ADMIN`/`SELLER`) con `POST /api/invoices/{id}/payments`: fecha no futura, monto mayor que cero y limitado al saldo, método de pago, referencia y notas. Al guardar se recargan la factura y el historial.
+- Nota de crédito en panel lateral exclusivo (solo `ADMIN`) con `POST /api/invoices/{id}/credit-note`: motivo obligatorio, devolución de stock opcional y advertencia de que anula factura y venta. Tras emitirla se muestra la nueva nota y se conserva el enlace a la factura relacionada.
+- Permisos según `SecurityConfig`: lectura para los tres roles; emisión y pagos `ADMIN`/`SELLER`; nota de crédito solo `ADMIN`. `PURCHASING` opera en modo lectura.
+- `invoice.model.ts` centraliza etiquetas, tonos, saldo y redondeo, vencimiento visual con fecha local, permisos y payloads; `invoice.service.ts` cubre listado, detalle, emisión, pagos y nota de crédito. `shared/util/date.util.ts` centraliza el tratamiento de fechas ISO sin hora y `lot.model.ts` las reexporta.
+- Sin acción de PDF porque `GET /api/invoices/{id}/pdf` aún no está implementado. La emisión no precarga una factura previa porque el listado no filtra por `saleId`; el conflicto se informa con el mensaje del backend.
+- Pruebas nuevas en `invoice.model.spec.ts` (12). Verificación: `npm run build` en verde (inicial 315.77 kB) y `npm test -- --watch=false` con 99 pruebas en verde.
+- Entregable 7.5 completado. Siguiente: entregable 7.6 (reportes).
+
 ## 10. Testing y CI/CD
 
 ### 10.1 Backend
@@ -695,7 +713,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones, precios con historial y lotes completados (17/11/2026); 7.3 clientes completado (17/11/2026); 7.4 ventas completado (17/11/2026); entregables 7.5–7.6 pendientes |
+| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones, precios con historial y lotes completados (17/11/2026); 7.3 clientes completado (17/11/2026); 7.4 ventas completado (17/11/2026); 7.5 facturación, pagos y nota de crédito completado (18/11/2026); entregable 7.6 pendiente |
 | 8 | Reportes | Pendiente |
 | 9 | Endurecimiento | Pendiente |
 

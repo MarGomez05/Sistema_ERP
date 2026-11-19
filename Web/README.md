@@ -1,8 +1,8 @@
 # TAMACHIHUA ERP · Cliente web Angular
 
-Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre autenticación, layout, navegación por rol, panel general, catálogos e inventario, clientes y ventas con confirmación FEFO y cancelación.
+Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre autenticación, layout, navegación por rol, panel general, catálogos e inventario, clientes, ventas con confirmación FEFO y cancelación, y facturación con pagos y notas de crédito.
 
-> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**. Facturación y reportes se incorporan en los siguientes entregables.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**; **7.5 completado** (18/11/2026) con **facturación, pagos y notas de crédito**. Reportes se incorpora en el entregable 7.6.
 
 ---
 
@@ -118,7 +118,7 @@ Contenido por perfil:
 
 - **ADMIN / WAREHOUSE**: cinco KPI (productos activos, bajo stock, lotes activos, por vencer y vencidos); dona de estado de los lotes activos (sin alerta / por vencer / vencidos), columnas de vencimientos por rango (vencidos, 0–7, 8–15 y 16–30 días), tabla paginada de bajo stock con barras de stock actual frente al mínimo de la página visible y tabla de lotes vencidos o por vencer con severidad.
 - **PURCHASING**: alerta de bajo stock, gráfica de barras de la página visible y tabla paginada, orientada a reposición.
-- **SELLER**: estado de bienvenida con sus datos de cuenta; los módulos de venta se habilitarán en el siguiente entregable.
+- **SELLER**: estado de bienvenida con sus datos de cuenta; el acceso a ventas y facturación se realiza desde la navegación.
 
 Las gráficas son SVG/CSS propios, sin Chart.js, ApexCharts ni otra dependencia. Solo representan los datos devueltos por `summary`, `low-stock` y `expiring-lots`; no se inventan tendencias ni comparaciones entre unidades distintas.
 
@@ -191,6 +191,18 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - Lectura para los cuatro roles; crear, editar y confirmar para `ADMIN` y `SELLER` (cada vendedor sobre sus propias ventas), y cancelar solo `ADMIN`, conforme a `SecurityConfig`.
 - `sale.model.ts` centraliza payloads con recorte y redondeo, totales estimados, etiquetas de estado y pago, saldo pendiente, permisos por estado/propietario y la validación visual del crédito.
 
+### Facturación (7.5 completado)
+
+- Listado `/invoices` con filtros por rango de fechas de emisión, cliente, tipo (`CONSUMER`, `CCF`, `CREDIT_NOTE`), estado (`ISSUED`, `CANCELLED`, `DRAFT`), paginación y contador. Cada fila muestra número y fecha, cliente, venta asociada, tipo, condición de pago, vencimiento con marca «Vencida», total, saldo, estado y acceso al detalle.
+- La emisión se realiza desde el detalle de una venta `CONFIRMED` con el panel «Facturar» (`ADMIN`/`SELLER`): tipo consumidor final o CCF, número de control opcional y notas. La condición de pago se copia de la venta y el cliente, las líneas y los totales quedan congelados como snapshot inmutable. `CCF` exige cliente registrado; si la venta ya tiene factura, se muestra el mensaje de conflicto del backend.
+- El listado enlaza a `/sales?status=CONFIRMED` para localizar ventas pendientes de facturar; el filtro de estado de ventas se sincroniza con la URL.
+- El detalle `/invoices/:id` concentra los datos fiscales del snapshot, las líneas facturadas, el historial de pagos y los totales (subtotal, descuentos, IVA, total, pagado y saldo), con avisos de factura pagada, vencida, cancelada o nota de crédito.
+- Registro de pagos en panel lateral exclusivo (`ADMIN`/`SELLER`): fecha no futura, monto mayor que cero y sin superar el saldo, método (`CASH`, `CARD`, `TRANSFER`, `CHECK`, `OTHER`), referencia ≤ 50 y notas ≤ 255. Al guardar se refrescan el saldo y el historial.
+- Nota de crédito en panel lateral exclusivo (solo `ADMIN`): motivo obligatorio ≤ 255 y casilla para devolver stock a los lotes. Anula la factura original y la venta asociada; tras emitirla se muestra la nueva nota con enlace a la factura relacionada.
+- Lectura para `ADMIN`, `PURCHASING` y `SELLER`; emisión y pagos para `ADMIN` y `SELLER`; nota de crédito solo `ADMIN`, conforme a `SecurityConfig`. `PURCHASING` opera en modo lectura.
+- `invoice.model.ts` centraliza etiquetas y tonos, saldo, vencimiento visual (el estado del backend no cambia al vencer), permisos y payloads con recorte, redondeo y conversión de vacíos a `null`.
+- El PDF de la factura (`GET /api/invoices/{id}/pdf`) corresponde a una fase posterior y no se ofrece todavía.
+
 ---
 
 ## 4. Identidad visual
@@ -252,6 +264,7 @@ Web/
 │   │   │   ├── lots/          # modelo, servicio, listado, ingreso y corrección de cantidad
 │   │   │   ├── customers/     # modelo, servicio, listado, formularios y detalle
 │   │   │   ├── sales/         # modelo, servicio, listado, editor y detalle de venta
+│   │   │   ├── billing/       # facturas, detalle, pagos y nota de crédito
 │   │   │   ├── dashboard/
 │   │   │   └── errors/
 │   │   ├── app.config.ts
@@ -287,6 +300,8 @@ Alias de importación disponibles: `@core/*`, `@shared/*`, `@layout/*`, `@featur
 | `/sales/new` | `ADMIN`, `SELLER` | Nueva venta en borrador |
 | `/sales/:id` | `ADMIN`, `WAREHOUSE`, `PURCHASING`, `SELLER` | Detalle, confirmación y cancelación (`ADMIN`) |
 | `/sales/:id/edit` | `ADMIN`, `SELLER` | Edición de una venta en borrador |
+| `/invoices` | `ADMIN`, `PURCHASING`, `SELLER` | Listado de facturas y notas de crédito |
+| `/invoices/:id` | `ADMIN`, `PURCHASING`, `SELLER` | Detalle, pagos (`ADMIN`/`SELLER`) y nota de crédito (`ADMIN`) |
 | `/` | Autenticados | Redirige a `/dashboard` |
 | `**` | Público | Página no encontrada |
 
@@ -338,6 +353,7 @@ La suite incluye:
 - `lot.model.spec.ts`: payload de ingreso con recorte y redondeo, fechas locales sin desfase, severidad y tono de vencimiento, etiquetas de días (incluidos vencidos y sin fecha), cantidades y costos visibles u ocultos, y búsqueda del último costo por presentación.
 - `customer.model.spec.ts`: payload de cliente con recorte y conversión de vacíos a `null`, normalización del crédito, etiquetas de tipo y documento, documento principal, disponible y porcentaje de uso, tonos y estados del crédito, y formatos de límite y días.
 - `sale.model.spec.ts`: payload de venta con recorte y redondeo, cálculo de líneas y totales con descuento, etiquetas de estado y pago, saldo pendiente, permisos de edición/confirmación/cancelación por estado y propietario, y advertencias de crédito.
+- `invoice.model.spec.ts`: etiquetas de tipo, estado y método de pago, saldo y redondeo, detección de notas de crédito y facturas vencidas, permisos de emisión/pago/nota de crédito y payloads de factura, pago y nota de crédito.
 
 El build de producción también valida plantillas estrictas y presupuestos de tamaño.
 
@@ -357,7 +373,7 @@ Salida: `dist/tamachihua-web/browser`.
 | 7.2 Catálogos e inventario | Catálogos, productos con presentaciones, precios con historial y lotes — **completado** |
 | 7.3 Clientes | Listado, filtros, detalle, creación, edición, estado y crédito — **completado** |
 | 7.4 Ventas | Listado, nueva venta, detalle, confirmación y cancelación — **completado** |
-| 7.5 Facturación | Emisión, detalle, pagos y notas de crédito |
+| 7.5 Facturación | Emisión, detalle, pagos y notas de crédito — **completado** |
 | 7.6 Reportes | Consultas y exportaciones definidas en la Fase 8 del plan |
 
 Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
@@ -366,14 +382,17 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
 ## 11. Limitaciones conocidas
 
-- Solo el panel general, los catálogos, los productos con sus presentaciones y precios, los lotes, los clientes y las ventas están implementados; facturación y reportes se agregan por entregable.
+- Solo el panel general, los catálogos, los productos con sus presentaciones y precios, los lotes, los clientes, las ventas y la facturación están implementados; reportes se agrega en el entregable 7.6.
 - El alta de lotes requiere el catálogo de proveedores, por lo que `WAREHOUSE` puede corregir cantidades pero no registrar ingresos desde la interfaz.
 - `PURCHASING` puede consultar lotes con costos y filtrar por proveedor, pero no registrar ingresos ni corregir cantidades.
 - Las condiciones de crédito y el estado de un cliente solo los modifica `ADMIN`; `SELLER` puede crear y editar los datos básicos, y al crear el cliente la línea de crédito queda en cero.
 - `PURCHASING` consulta clientes, saldo y crédito en modo lectura.
 - `SELLER` solo ve sus propias ventas; `WAREHOUSE` y `PURCHASING` consultan el historial completo sin crear, editar, confirmar ni cancelar. Cancelar una venta queda reservado a `ADMIN`.
 - El listado de ventas filtra por fechas, cliente y estado porque la API no expone búsqueda por número de venta.
-- La emisión de factura desde una venta confirmada y los pagos corresponden al entregable 7.5; el detalle solo muestra el saldo pendiente.
+- La emisión de factura se hace desde el detalle de una venta confirmada; no hay formulario de emisión suelto en el listado. Si la venta ya fue facturada, el intento se rechaza con el mensaje del backend porque la API no expone una consulta de factura por venta.
+- La API no implementa `GET /api/invoices/{id}/pdf`; la interfaz no ofrece descarga ni impresión de facturas.
+- El vencimiento de las facturas a crédito se calcula visualmente con `dueDate`; el estado del backend no cambia a «vencida» y el filtro de estado solo admite `DRAFT`, `ISSUED` y `CANCELLED`.
+- `PURCHASING` consulta facturas y pagos en modo lectura; no emite facturas, no registra pagos ni emite notas de crédito.
 - El filtro por cliente del listado de ventas y el alta requieren `/api/customers/options`, disponible para `ADMIN` y `SELLER`.
 - La imagen de cada presentación se referencia por URL: no hay subida de archivos ni almacenamiento binario en el cliente.
 - No hay entorno de producción ni pipeline de despliegue del frontend todavía.
