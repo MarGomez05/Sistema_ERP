@@ -224,7 +224,7 @@ OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 | Proveedores | `/api/suppliers` |
 | Lotes | `/api/lots`, `/api/products/{productId}/last-cost` |
 | Dashboard | `/api/dashboard/summary`, `/api/dashboard/low-stock`, `/api/dashboard/expiring-lots` |
-| Reportes | `/api/reports/stock/export` |
+| Reportes | `/api/reports/sales`, `/api/reports/receivables`, `/api/reports/top-products`, `/api/reports/stock`, `/api/reports/stock/export` |
 | Clientes | `/api/customers`, `/api/customers/options`, `/api/customers/{id}/status`, `/api/customers/{id}/credit` |
 | Ventas | `/api/sales`, `/api/sales/{id}/confirm`, `/api/sales/{id}/cancel` |
 
@@ -259,7 +259,26 @@ Facturación: la factura se emite solo desde una venta `CONFIRMED` y sin factura
 
 PDF: `GET /api/invoices/{id}/pdf` (ADMIN, PURCHASING y SELLER) genera el documento con PDFBox a partir del snapshot inmutable. Incluye encabezado fiscal de la empresa, cliente, líneas, totales, pagos, saldo y datos de cancelación o nota de crédito. Los datos de la empresa se configuran en `app.company.*` (`COMPANY_NAME`, `COMPANY_NIT`, `COMPANY_NRC`, `COMPANY_ADDRESS`, `COMPANY_PHONE`, `COMPANY_EMAIL`).
 
-### 7.3 Retirados
+> Nota de codificación: Spring Boot lee `application.properties` como ISO-8859-1. Las tildes en los valores por defecto deben escribirse con escapes Unicode (por ejemplo, `Lourdes Col\u00f3n`); de lo contrario se imprimen como «Ã³» en el PDF. Las variables de entorno no necesitan escape.
+
+### 7.3 Reportes
+
+```text
+GET  /api/reports/sales?from=&to=&groupBy=DAY|MONTH
+GET  /api/reports/receivables?asOf=
+GET  /api/reports/top-products?from=&to=&limit=
+GET  /api/reports/stock?categoryId=
+GET  /api/reports/stock/export?format=PDF|XLSX&categoryId=
+```
+
+- Ventas: solo `CONFIRMED`, agrupadas por día o mes; incluye períodos sin movimiento.
+- Cuentas por cobrar: facturas `ISSUED` con saldo, excluye notas de crédito y clasifica en al día, 1–30, 31–60, 61–90 y más de 90 días.
+- Productos más vendidos: ranking por cantidad con desempate por importe; `limit` entre 1 y 50.
+- Existencias: presentaciones activas con stock físico, stock vendible (sin lotes vencidos), mínimo, precio vigente y marca de bajo stock. `categoryId` es opcional.
+- Exportación: PDF con Apache PDFBox 3.0.8 y XLSX con Apache POI 5.5.1, con datos de `app.company.*`.
+- Roles: reportes comerciales para `ADMIN`, `PURCHASING` y `SELLER`; existencias y exportación para `ADMIN`, `WAREHOUSE` y `PURCHASING`.
+
+### 7.4 Retirados
 
 - `/api/app/**`
 - Encabezado `X-Client-Interface`
@@ -286,6 +305,8 @@ Roles no jerárquicos: `ADMIN`, `WAREHOUSE`, `PURCHASING`, `SELLER`.
 | Ventas: cancelar | ✔ | – | – | – |
 | Facturación | ✔ | – | consulta | emitir |
 | Pagos | ✔ | – | consulta | registrar |
+| Reportes comerciales | ✔ | – | consulta | consulta |
+| Reportes de existencias y export | ✔ | consulta | consulta | – |
 
 Reglas:
 

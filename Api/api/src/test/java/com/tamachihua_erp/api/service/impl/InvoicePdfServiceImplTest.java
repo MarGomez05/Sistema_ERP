@@ -46,6 +46,7 @@ class InvoicePdfServiceImplTest {
 
             assertThat(text)
                     .contains("MARERP S.A. DE C.V.")
+                    .contains("Lourdes Colón, La Libertad")
                     .contains("06852248-1")
                     .contains("F-2026-000001")
                     .contains("Cliente Ejemplo, S.A.")

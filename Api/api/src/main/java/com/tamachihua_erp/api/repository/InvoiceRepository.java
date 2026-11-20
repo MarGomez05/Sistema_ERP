@@ -15,6 +15,7 @@ import org.springframework.data.repository.query.Param;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.time.LocalDate;
 
 // Facturas y notas de crédito (V4, contrato §12).
 public interface InvoiceRepository
@@ -51,4 +52,15 @@ public interface InvoiceRepository
     // Facturas de varias ventas en una sola consulta para el listado.
     @Query("select i from Invoice i where i.sale.id in :saleIds")
     List<Invoice> findBySaleIdIn(@Param("saleIds") Collection<Long> saleIds);
+
+    // Cuentas por cobrar: facturas emitidas con saldo, sin notas de crédito.
+    @Query("""
+            select i from Invoice i
+            where i.status = 'ISSUED'
+              and i.invoiceType <> 'CREDIT_NOTE'
+              and i.total > i.paidTotal
+              and i.issueDate <= :asOf
+            order by i.issueDate asc, i.id asc
+            """)
+    List<Invoice> findReceivables(@Param("asOf") LocalDate asOf);
 }

@@ -374,13 +374,18 @@ El servidor calcula `entryDate`, `availableQuantity`, `totalCost` (columna gener
 
 ---
 
-## 9. Reporte de existencias
+## 9. Reportes · `/api/reports`
 
 | Método y ruta | Roles | Descripción |
 |---|---|---|
-| `GET /api/reports/stock/export?format=PDF\|XLSX&categoryId=` | ADMIN | Descarga el archivo |
+| `GET /api/reports/sales?from=&to=&groupBy=DAY\|MONTH` | ADMIN, PURCHASING, SELLER | Ventas confirmadas por período; por defecto mes en curso agrupado por día |
+| `GET /api/reports/receivables?asOf=` | ADMIN, PURCHASING, SELLER | Cuentas por cobrar al corte, con tramos de antigüedad (al día, 1–30, 31–60, 61–90 y más de 90 días) |
+| `GET /api/reports/top-products?from=&to=&limit=` | ADMIN, PURCHASING, SELLER | Productos más vendidos por cantidad; `limit` entre 1 y 50 (10 por defecto) |
+| `GET /api/reports/stock?categoryId=` | ADMIN, WAREHOUSE, PURCHASING | Existencias por presentación activa con stock físico, vendible, mínimo y precio vigente |
+| `GET /api/reports/stock/export?format=PDF\|XLSX&categoryId=` | ADMIN, WAREHOUSE, PURCHASING | Descarga el reporte de existencias en PDF o Excel |
 
-Columnas: código, producto, presentación, existencia física, stock vendible, mínimo y precio vigente.
+Columnas del reporte de existencias: código, producto, presentación, existencia física, stock vendible, mínimo y precio vigente. El export respeta el filtro `categoryId`.
+
 
 ---
 
