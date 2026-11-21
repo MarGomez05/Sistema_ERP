@@ -81,8 +81,8 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
         private static final Rgb BRAND = new Rgb(0, 75, 135);
         private static final Rgb TEXT = new Rgb(33, 43, 54);
         private static final Rgb MUTED = new Rgb(100, 116, 132);
-        private static final Rgb LIGHT = new Rgb(244, 247, 250);
-        private static final Rgb BORDER = new Rgb(214, 222, 230);
+        private static final Rgb LIGHT = new Rgb(247, 247, 250);
+        private static final Rgb BORDER = new Rgb(242, 252, 255);
         private static final Rgb WHITE = new Rgb(255, 255, 255);
         private static final Rgb SUCCESS = new Rgb(22, 101, 52);
         private static final Rgb DANGER = new Rgb(180, 38, 38);
@@ -190,7 +190,6 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
 
             content = new PDPageContentStream(document, page);
 
-            drawTopBar();
 
             y = PAGE_HEIGHT - MARGIN;
         }
@@ -206,7 +205,6 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
 
             content = new PDPageContentStream(document, page);
 
-            drawTopBar();
 
             color(content, BRAND);
             drawText(content, bold, 10.5f, MARGIN, PAGE_HEIGHT - 54, company.name());
@@ -231,10 +229,6 @@ public class InvoicePdfServiceImpl implements InvoicePdfService {
             }
         }
 
-        private void drawTopBar() throws IOException {
-
-            fill(content, 0, PAGE_HEIGHT - 10, PAGE_WIDTH, 10, BRAND);
-        }
 
         private void drawFirstPageHeader() throws IOException {
 

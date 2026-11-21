@@ -1,8 +1,8 @@
 # TAMACHIHUA ERP · Cliente web Angular
 
-Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre autenticación, layout, navegación por rol, panel general, catálogos e inventario, clientes, ventas con confirmación FEFO y cancelación, y facturación con pagos y notas de crédito.
+Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre autenticación, layout, navegación por rol, panel general, catálogos e inventario, clientes, ventas con confirmación FEFO y cancelación, facturación con pagos y notas de crédito, y reportes con exportación de existencias.
 
-> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**; **7.5 completado** (18/11/2026) con **facturación, pagos, notas de crédito y descarga de PDF**, incluido el estado de facturación en ventas. Reportes se incorpora en el entregable 7.6.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**; **7.5 completado** (18/11/2026) con **facturación, pagos, notas de crédito y descarga de PDF**, incluido el estado de facturación en ventas; **7.6 completado** (20/11/2026) con **reportes de ventas, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/Excel**.
 
 ---
 
@@ -204,6 +204,16 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - `invoice.model.ts` centraliza etiquetas y tonos, saldo, vencimiento visual (el estado del backend no cambia al vencer), permisos y payloads con recorte, redondeo y conversión de vacíos a `null`.
 - El detalle de factura ofrece «Descargar PDF» (`GET /api/invoices/{id}/pdf`). El archivo se descarga como `factura-<número>.pdf` con encabezado fiscal de la empresa, snapshot del cliente, líneas, totales, pagos acumulados, saldo y datos de cancelación o nota de crédito. La descarga maneja errores con un aviso y funciona también para notas de crédito.
 
+### Reportes (7.6 completado)
+
+- Nueva página `/reports` con pestañas accesibles: «Ventas por período», «Cuentas por cobrar», «Productos más vendidos» y «Existencias». Las pestañas visibles dependen del rol: los reportes comerciales son para `ADMIN`, `PURCHASING` y `SELLER`; existencias para `ADMIN`, `WAREHOUSE` y `PURCHASING`. `WAREHOUSE` entra directamente a existencias.
+- «Ventas por período» (`GET /api/reports/sales`) filtra por rango de fechas y agrupación por día o mes. Muestra ventas, subtotal, descuentos, IVA y total vendido, una gráfica de columnas con las ventas confirmadas de cada período y una tabla con cantidad, total y ticket promedio, incluidos los períodos sin movimiento.
+- «Cuentas por cobrar» (`GET /api/reports/receivables`) toma una fecha de corte y muestra saldo pendiente, vencido, al día y cantidad de clientes. Los tramos de antigüedad (al día, 1–30, 31–60, 61–90 y más de 90 días) se presentan con su importe y participación, y el detalle lista las facturas con saldo, enlazadas a su factura.
+- «Productos más vendidos» (`GET /api/reports/top-products`) permite elegir un ranking de 5, 10, 20 o 50; muestra unidades e importe total, la tabla ordenada con participación relativa al líder y el empate resuelto por importe en el backend.
+- «Existencias» (`GET /api/reports/stock`) filtra por categoría y búsqueda local por código o nombre, y muestra existencia física, stock vendible (sin lotes vencidos), mínimo, precio vigente y estado «Disponible»/«Bajo stock».
+- Exportación de existencias desde la misma pestaña: `GET /api/reports/stock/export?format=PDF|XLSX` descarga `existencias-<fecha>.pdf` o `.xlsx` con el filtro de categoría aplicado. Los botones indican la carga y los errores se notifican con un aviso.
+- `report.model.ts` centraliza los tipos del contrato, etiquetas y tonos de los tramos de antigüedad, el formato de cantidades y el nombre del archivo exportado.
+
 ---
 
 ## 4. Identidad visual
@@ -303,6 +313,7 @@ Alias de importación disponibles: `@core/*`, `@shared/*`, `@layout/*`, `@featur
 | `/sales/:id/edit` | `ADMIN`, `SELLER` | Edición de una venta en borrador |
 | `/invoices` | `ADMIN`, `PURCHASING`, `SELLER` | Listado de facturas y notas de crédito |
 | `/invoices/:id` | `ADMIN`, `PURCHASING`, `SELLER` | Detalle, pagos (`ADMIN`/`SELLER`) y nota de crédito (`ADMIN`) |
+| `/reports` | `ADMIN`, `WAREHOUSE`, `PURCHASING`, `SELLER` | Reportes; pestañas y exportación según el rol |
 | `/` | Autenticados | Redirige a `/dashboard` |
 | `**` | Público | Página no encontrada |
 
@@ -355,8 +366,9 @@ La suite incluye:
 - `customer.model.spec.ts`: payload de cliente con recorte y conversión de vacíos a `null`, normalización del crédito, etiquetas de tipo y documento, documento principal, disponible y porcentaje de uso, tonos y estados del crédito, y formatos de límite y días.
 - `sale.model.spec.ts`: payload de venta con recorte y redondeo, cálculo de líneas y totales con descuento, etiquetas de estado y pago, saldo pendiente, permisos de edición/confirmación/cancelación por estado y propietario, y advertencias de crédito.
 - `invoice.model.spec.ts`: etiquetas de tipo, estado y método de pago, saldo y redondeo, detección de notas de crédito y facturas vencidas, permisos de emisión/pago/nota de crédito y payloads de factura, pago y nota de crédito.
+- `report.model.spec.ts`: etiquetas y tonos de los tramos de antigüedad, nombre del archivo de exportación según el formato y formato de cantidades.
 
-El build de producción también valida plantillas estrictas y presupuestos de tamaño.
+El build de producción también valida plantillas estrictas y presupuestos de tamaño. La suite actual tiene **104 pruebas** en verde.
 
 ```bash
 npm run build
@@ -375,7 +387,7 @@ Salida: `dist/tamachihua-web/browser`.
 | 7.3 Clientes | Listado, filtros, detalle, creación, edición, estado y crédito — **completado** |
 | 7.4 Ventas | Listado, nueva venta, detalle, confirmación y cancelación — **completado** |
 | 7.5 Facturación | Emisión, detalle, pagos y notas de crédito — **completado** |
-| 7.6 Reportes | Consultas y exportaciones definidas en la Fase 8 del plan |
+| 7.6 Reportes | Ventas por período, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/Excel — **completado** |
 
 Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
@@ -383,7 +395,7 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
 ## 11. Limitaciones conocidas
 
-- Solo el panel general, los catálogos, los productos con sus presentaciones y precios, los lotes, los clientes, las ventas y la facturación están implementados; reportes se agrega en el entregable 7.6.
+- Solo el panel general, los catálogos, los productos con sus presentaciones y precios, los lotes, los clientes, las ventas, la facturación y los reportes están implementados.
 - El alta de lotes requiere el catálogo de proveedores, por lo que `WAREHOUSE` puede corregir cantidades pero no registrar ingresos desde la interfaz.
 - `PURCHASING` puede consultar lotes con costos y filtrar por proveedor, pero no registrar ingresos ni corregir cantidades.
 - Las condiciones de crédito y el estado de un cliente solo los modifica `ADMIN`; `SELLER` puede crear y editar los datos básicos, y al crear el cliente la línea de crédito queda en cero.

@@ -434,7 +434,7 @@ Reglas:
 
 ## 9. Frontend Angular
 
-> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, productos, precios, lotes, clientes, ventas y facturación de los entregables 7.2 a 7.5 están completos; reportes se agrega en la fase 7.6 sobre esta base.
+> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, productos, precios, lotes, clientes, ventas, facturación y reportes de los entregables 7.2 a 7.6 están completos sobre esta base.
 
 ### 9.1 Ubicación
 
@@ -622,7 +622,25 @@ Implementado el 18/11/2026:
 - `GET /api/invoices/{id}/pdf` genera el documento con Apache PDFBox 3.0.8 desde el snapshot: encabezado fiscal de la empresa, cliente, líneas, totales, pagos, saldo, notas, cancelación o nota de crédito, con paginación y pie de página.
 - Datos de empresa configurables en `app.company.*` y variables `COMPANY_NAME`, `COMPANY_NIT`, `COMPANY_NRC`, `COMPANY_ADDRESS`, `COMPANY_PHONE` y `COMPANY_EMAIL`.
 - El detalle de factura añade «Descargar PDF» con nombre `factura-<número>.pdf`, manejo de errores y soporte para notas de crédito.
+- El 19/11/2026 se corrigió la codificación de la dirección: al leer `application.properties` como ISO-8859-1, la tilde se imprimía como «ColÃ³n». El valor por defecto usa el escape `\u00f3` y una prueba de regresión valida la carga del archivo.
 - Verificación: backend `compile` y pruebas unitarias de PDF, ventas y facturación en verde; frontend con build en verde (315.86 kB) y 99 pruebas. La suite completa con Testcontainers no se ejecutó por falta de Docker.
+
+### 9.14 Reportes (fase 7.6)
+
+Implementado el 20/11/2026:
+
+- Backend: `ReportService`/`ReportServiceImpl`, `ReportExportService`/`ReportExportServiceImpl` y `ReportsController` bajo `/api/reports`.
+- `GET /api/reports/sales?from=&to=&groupBy=DAY|MONTH`: agrega ventas `CONFIRMED` por día o mes, incluye períodos sin movimiento y devuelve cantidad, subtotal, descuentos, IVA, total y serie temporal.
+- `GET /api/reports/receivables?asOf=`: facturas `ISSUED` con saldo, excluye notas de crédito y clasifica la deuda en al día, 1–30, 31–60, 61–90 y más de 90 días; devuelve totales, tramos y detalle por factura.
+- `GET /api/reports/top-products?from=&to=&limit=`: ranking por cantidad vendida con desempate por importe; `limit` se limita a 50.
+- `GET /api/reports/stock?categoryId=`: existencias por presentación activa con stock físico, stock vendible (excluye lotes vencidos), mínimo, precio vigente y marca de bajo stock.
+- `GET /api/reports/stock/export?format=PDF|XLSX&categoryId=`: PDF con Apache PDFBox 3.0.8 y Excel con Apache POI 5.5.1, con encabezado de empresa, totales y filtro aplicado.
+- Seguridad: reportes comerciales para `ADMIN`, `PURCHASING` y `SELLER`; existencias y exportación para `ADMIN`, `WAREHOUSE` y `PURCHASING`.
+- Utilidades con pruebas: `ReportPeriodCalculator` (claves y etiquetas de períodos) y `ReceivableAging` (tramos y etiquetas). Pruebas nuevas: `ReportServiceImplTest`, `ReportExportServiceImplTest`, `ReportPeriodCalculatorTest` y `ReceivableAgingTest`.
+- Frontend: módulo `/reports` (`REPORTS_ROUTES`) con pestañas por rol. «Ventas por período» incluye filtros de fechas y agrupación, tarjetas de totales, gráfica de columnas y tabla con ticket promedio; «Cuentas por cobrar» muestra corte, saldos, tramos de antigüedad y facturas con saldo; «Productos más vendidos» permite elegir el tamaño del ranking y muestra participación relativa; «Existencias» filtra por categoría y búsqueda, y descarga PDF o Excel.
+- Navegación: sección «Comercial» con «Reportes» para los cuatro roles; dentro de la página, `WAREHOUSE` solo ve existencias y `SELLER` no ve el reporte de existencias.
+- Pruebas nuevas en `report.model.spec.ts` (4 casos).
+- Verificación: backend `compile` y pruebas unitarias de reportes, PDF y propiedades en verde; frontend `npm run build` en verde (inicial 316.17 kB, módulo de reportes en 36.09 kB) y `npm test -- --watch=false` con 104 pruebas en verde. La suite completa con Testcontainers no se ejecutó por falta de Docker.
 
 ## 10. Testing y CI/CD
 
@@ -724,8 +742,8 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones, precios con historial y lotes completados (17/11/2026); 7.3 clientes completado (17/11/2026); 7.4 ventas completado (17/11/2026); 7.5 facturación, pagos, nota de crédito y PDF completado (18/11/2026); entregable 7.6 pendiente |
-| 8 | Reportes | Pendiente |
+| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones, precios con historial y lotes completados (17/11/2026); 7.3 clientes completado (17/11/2026); 7.4 ventas completado (17/11/2026); 7.5 facturación, pagos, nota de crédito y PDF completado (18/11/2026); 7.6 reportes completado (20/11/2026) |
+| 8 | Reportes | **Completada (20/11/2026)**: ventas por período, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/XLSX |
 | 9 | Endurecimiento | Pendiente |
 
 Detalle de la Fase 2:

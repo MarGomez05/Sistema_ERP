@@ -305,6 +305,24 @@ public class SecurityConfig {
                                 "/api/dashboard/low-stock"
                         ).hasAnyRole("ADMIN", "WAREHOUSE", "PURCHASING")
 
+                        // Reportes de inventario: ADMIN, WAREHOUSE y PURCHASING
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/reports/stock",
+                                "/api/reports/stock/**"
+                        ).hasAnyRole("ADMIN", "WAREHOUSE", "PURCHASING")
+
+                        // Reportes comerciales: ADMIN, PURCHASING y SELLER
+                        .requestMatchers(
+                                HttpMethod.GET,
+                                "/api/reports/sales",
+                                "/api/reports/sales/**",
+                                "/api/reports/receivables",
+                                "/api/reports/receivables/**",
+                                "/api/reports/top-products",
+                                "/api/reports/top-products/**"
+                        ).hasAnyRole("ADMIN", "PURCHASING", "SELLER")
+
                         // Productos: lectura para ADMIN, WAREHOUSE y PURCHASING (HU-06, HU-07)
                         .requestMatchers(
                                 HttpMethod.GET,

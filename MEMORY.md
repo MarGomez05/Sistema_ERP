@@ -1,8 +1,8 @@
 # MEMORY.md — TAMACHIHUA-ERP
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
-> Última actualización: 18/11/2026.
-> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1**; **7.2 completado** con los módulos de **catálogos**, **productos con sus presentaciones**, **precios con historial** y **lotes con corrección de cantidad**, **7.3 completado** con **clientes** (listado, detalle, alta, edición, estado y crédito), **7.4 completado** con **ventas** (listado, alta, edición, detalle, confirmación y cancelación) y **7.5 completado** con **facturación** (emisión, detalle, pagos, nota de crédito y PDF), más un sistema de botones con degradado de marca. El precio de línea de venta quedó de solo lectura y el estado de facturación se muestra en ventas. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 99 pruebas en verde.
+> Última actualización: 20/11/2026.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1**; **7.2 completado** con los módulos de **catálogos**, **productos con sus presentaciones**, **precios con historial** y **lotes con corrección de cantidad**, **7.3 completado** con **clientes** (listado, detalle, alta, edición, estado y crédito), **7.4 completado** con **ventas** (listado, alta, edición, detalle, confirmación y cancelación), **7.5 completado** con **facturación** (emisión, detalle, pagos, nota de crédito y PDF) y **7.6 completado** con **reportes** (ventas por período, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/XLSX), más un sistema de botones con degradado de marca. El precio de línea de venta quedó de solo lectura y el estado de facturación se muestra en ventas. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 104 pruebas en verde.
 
 ## 1. Resumen
 
@@ -43,11 +43,12 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Clientes: listado paginado con filtros, opciones, detalle con saldo pendiente, creación, edición, estado y crédito; matriz de seguridad aplicada.
 - Ventas: creación/edición en `DRAFT`, confirmación con FEFO y bloqueo pesimista, cancelación con devolución de stock, numeración por secuencia y validación de crédito.
 - Facturación: emisión desde ventas confirmadas, snapshot inmutable, pagos con control de saldo y notas de crédito con devolución opcional de stock (`/api/invoices`).
+- Reportes: ventas confirmadas por período, cuentas por cobrar con tramos de antigüedad, productos más vendidos y existencias exportables en PDF/XLSX (`/api/reports`).
 - Imágenes: `imageUrl` e `imageAlt` en presentaciones, expuestos en el detalle del producto y editables con `PUT /api/products/{productId}/presentations/{id}/image` (solo referencia, sin binarios).
 - Aún no hay subida de archivos ni almacenamiento local/S3 (D-06).
 - Tests: contexto de Spring con Testcontainers (requiere Docker), pruebas unitarias de clientes, ventas, facturación e imágenes, y validación E2E manual contra PostgreSQL local.
 - No hay CI/CD configurado.
-- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard con gráficas SVG/CSS propias, página 404, **catálogos de inventario**, **productos con presentaciones** y **precios con historial**; documentado en `Web/README.md`.
+- **Frontend Angular 22 implementado en `Web/`** con la base del ERP: login real, layout, guards por rol, dashboard con gráficas SVG/CSS propias, página 404, **catálogos de inventario**, **productos con presentaciones** y **precios con historial**, **lotes**, **clientes**, **ventas**, **facturación** y **reportes con exportación de existencias**; documentado en `Web/README.md`.
 - Rama de trabajo actual: `feature/web-base`. No se debe hacer commit sin autorización.
 
 ### Avance 14/11/2026 — Fase 2 (Flyway)
@@ -248,6 +249,27 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Verificación: backend `compile` y pruebas unitarias de PDF, ventas y facturación en verde; frontend `npm run build` en verde (inicial 315.86 kB) y `npm test -- --watch=false` con 99 pruebas. No se ejecutó la suite completa con Testcontainers porque Docker no está disponible en el entorno.
 - Pendiente: validar la descarga y el PDF con backend y datos reales en navegador.
 
+### Avance 19/11/2026 — Codificación de la dirección en el PDF
+
+- La dirección de la empresa se imprimía como «Lourdes ColÃ³n» porque Spring Boot lee `application.properties` como ISO-8859-1: la tilde UTF-8 se interpretaba como dos caracteres Latin-1.
+- El valor por defecto quedó como `Lourdes Col\u00f3n, La Libertad` (escape Unicode) en `application.properties`. En despliegue, `COMPANY_ADDRESS` se sigue leyendo como variable de entorno y no requiere escape.
+- Se agregó `CompanyPropertiesResourceTest`, que carga el archivo con la misma codificación de Spring y exige la tilde correcta; `InvoicePdfServiceImplTest` ahora también verifica la dirección en el texto del PDF.
+- Verificación: `compile` y pruebas de PDF, propiedades, ventas, facturación y validaciones en verde.
+
+### Avance 20/11/2026 — Fase 7.6 (Reportes)
+
+- Backend: `ReportService`/`ReportServiceImpl`, `ReportExportService`/`ReportExportServiceImpl` y `ReportsController` en `/api/reports`. DTOs en `dto/report/` y proyecciones en `repository/projection/`.
+- `GET /api/reports/sales?from=&to=&groupBy=DAY|MONTH`: agrega ventas `CONFIRMED` con cantidad, subtotal, descuentos, IVA y total; incluye los períodos sin movimiento para que la serie no tenga huecos.
+- `GET /api/reports/receivables?asOf=`: facturas `ISSUED` con saldo (excluye notas de crédito), totales vencido/al día y tramos de antigüedad `CURRENT`, `D1_30`, `D31_60`, `D61_90` y `D90_PLUS`.
+- `GET /api/reports/top-products?from=&to=&limit=`: ranking por cantidad vendida con desempate por importe; el límite se acota a 50.
+- `GET /api/reports/stock?categoryId=`: presentaciones activas con stock físico, stock vendible (excluye lotes vencidos), mínimo, precio vigente y marca de bajo stock.
+- `GET /api/reports/stock/export?format=PDF|XLSX&categoryId=`: PDF con Apache PDFBox 3.0.8 y Excel con Apache POI 5.5.1; ambos respetan el filtro de categoría e incluyen datos de `app.company.*`.
+- Seguridad: reportes comerciales para `ADMIN`, `PURCHASING` y `SELLER`; existencias y exportación para `ADMIN`, `WAREHOUSE` y `PURCHASING`.
+- Frontend: módulo `/reports` con pestañas por rol. Ventas por período (fechas, agrupación, tarjetas, gráfica y tabla con ticket promedio), cuentas por cobrar (corte, saldos, tramos y detalle enlazado a facturas), productos más vendidos (ranking 5/10/20/50 con participación) y existencias (filtro por categoría, búsqueda, tabla y descarga PDF/Excel).
+- Pruebas nuevas: `ReportServiceImplTest`, `ReportExportServiceImplTest`, `ReportPeriodCalculatorTest`, `ReceivableAgingTest` y `report.model.spec.ts`.
+- Verificación: backend `compile` y pruebas unitarias de reportes, PDF y propiedades en verde; frontend `npm run build` en verde (inicial 316.17 kB, módulo de reportes 36.09 kB) y `npm test -- --watch=false` con 104 pruebas en verde. La suite completa con Testcontainers sigue bloqueada por falta de Docker.
+- Pendiente: validar los reportes y las descargas en navegador con backend y datos reales.
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -291,6 +313,7 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-26 | Ventas se gestiona en `/sales` con editor de página completa (`/sales/new`, `/sales/:id/edit`) y detalle (`/sales/:id`). La venta se crea en `DRAFT`, el precio se toma del vigente de la presentación y el servidor recalcula base e IVA. Lectura para los cuatro roles, crear/editar/confirmar para `ADMIN`/`SELLER` y cancelar solo `ADMIN`; la confirmación descuenta stock con FEFO | Aplicada |
 | D-27 | Facturación se consulta en `/invoices` y `/invoices/:id` con lectura `ADMIN`/`PURCHASING`/`SELLER`. La emisión se hace desde el detalle de una venta `CONFIRMED` (`ADMIN`/`SELLER`) y no desde el listado. Pagos y nota de crédito viven en paneles laterales exclusivos del detalle; los pagos son `ADMIN`/`SELLER` y la nota de crédito solo `ADMIN`. El vencimiento se calcula visualmente, no cambia el estado del backend. Sin PDF hasta que exista el endpoint | Reemplazada por D-28 |
 | D-28 | El precio de línea de venta es de solo lectura en la web y se toma del precio vigente; el costo unitario de lotes sigue editable porque proviene de la factura del proveedor. `GET /api/invoices/{id}/pdf` genera el documento con Apache PDFBox desde el snapshot y datos de empresa configurables. Las ventas exponen `invoiceId`/`invoiceNumber` para mostrar «Facturada»/«Sin facturar» y ocultar la emisión duplicada | Aplicada |
+| D-29 | Reportes vive en `/reports` con pestañas por rol. Backend: `GET /api/reports/sales`, `/receivables`, `/top-products`, `/stock` y `/stock/export`; comerciales para `ADMIN`/`PURCHASING`/`SELLER` y existencias para `ADMIN`/`WAREHOUSE`/`PURCHASING`. El export usa PDFBox para PDF y Apache POI para XLSX, sin estado persistido | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -442,7 +465,8 @@ npm test -- --watch=false
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Ejecutar la suite con Testcontainers cuando haya Docker disponible.
 - Configurar CI/CD.
-- Frontend: entregables 7.2, 7.3, 7.4 y 7.5 completados (inventario, clientes, ventas y facturación); continuar con el entregable 7.6 (reportes) sobre la base ya creada en `Web/`.
+- Frontend: entregables 7.2, 7.3, 7.4, 7.5 y 7.6 completados (inventario, clientes, ventas, facturación y reportes).
+- Frontend: validar en navegador los reportes y las descargas PDF/XLSX de existencias con backend y datos reales; el entorno no tiene Docker ni PostgreSQL disponibles.
 - Frontend: validar visualmente el rediseño 7.1.1 en navegador con backend y credenciales reales; en el entorno de trabajo no estaban disponibles.
 - Frontend: validar en navegador la insignia de facturación y la descarga de PDF con backend y credenciales reales; el entorno no tenía Docker ni PostgreSQL disponibles.
 - Frontend: definir estrategia de despliegue con proxy inverso para `/api`.
