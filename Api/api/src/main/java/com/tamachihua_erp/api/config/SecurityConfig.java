@@ -203,10 +203,12 @@ public class SecurityConfig {
                                 "/api/products/*/last-cost"
                         ).hasAnyRole("ADMIN", "PURCHASING")
 
-                        // Usuarios: únicamente ADMIN (HU-02)
+                        // Usuarios y roles: únicamente ADMIN (HU-02)
                         .requestMatchers(
                                 "/api/users",
-                                "/api/users/**"
+                                "/api/users/**",
+                                "/api/roles",
+                                "/api/roles/**"
                         ).hasRole("ADMIN")
 
                         // Proveedores: ADMIN y PURCHASING (HU-09)

@@ -230,6 +230,8 @@ OpenAPI JSON: `http://localhost:8080/v3/api-docs`
 
 Patrón CRUD: `GET` paginado, `GET /options`, `GET /{id}`, `POST`, `PUT /{id}` y `PATCH /{id}/status`. No hay `DELETE`.
 
+Usuarios y roles: solo `ADMIN`. `/api/users` mantiene el patrón paginado; `/api/roles` devuelve el catálogo completo y `/api/roles/options` los roles activos. El código del rol se normaliza a mayúsculas al crear y no se modifica al editar porque la seguridad lo usa para autorizar. Reglas: no se puede desactivar el rol `ADMIN`, no se puede desactivar un rol con usuarios activos, un administrador no puede desactivarse a sí mismo, quitarse su propio rol `ADMIN` ni dejar el sistema sin un `ADMIN` activo. Los roles nuevos se registran en el catálogo; sus permisos por módulo se habilitan en `SecurityConfig`.
+
 Clientes: `GET` incluye `outstandingBalance` (facturas `ISSUED`, `total - paid_total`); el listado resuelve los saldos con una consulta agregada.
 
 Ventas: `GET` con filtros `from`, `to`, `customerId`, `status` y `userId`; `POST` y `PUT` solo en `DRAFT`; `confirm` consume stock vendible en orden FEFO con bloqueo pesimista; `cancel` devuelve stock y exige que no exista factura emitida. El `saleNumber` se genera con `document_sequences` (`V-AAAA-NNNNNN`). El listado y el detalle incluyen `invoiceId` e `invoiceNumber` (nulos si la venta no está facturada) para que el cliente muestre el estado de facturación sin consultas adicionales.

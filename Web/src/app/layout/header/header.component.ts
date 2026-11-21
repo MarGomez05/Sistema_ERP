@@ -10,7 +10,7 @@ import {
 import { RouterLink } from '@angular/router';
 
 import { AuthService } from '@core/auth/auth.service';
-import { ROLE_LABELS } from '@core/auth/auth.model';
+import { roleLabel as formatRoleLabel } from '@core/auth/auth.model';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
 @Component({
@@ -294,10 +294,7 @@ export class HeaderComponent {
   protected readonly user = this.auth.user;
   protected readonly userMenuOpen = signal(false);
 
-  protected readonly roleLabel = computed(() => {
-    const role = this.user()?.role;
-    return role !== undefined ? ROLE_LABELS[role] : '';
-  });
+  protected readonly roleLabel = computed(() => formatRoleLabel(this.user()?.role));
 
   protected readonly initials = computed(() => {
     const name = this.user()?.fullName ?? '';

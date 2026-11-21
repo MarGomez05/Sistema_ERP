@@ -129,14 +129,20 @@ public class UserServiceImpl implements UserService {
 
         Role role = findAssignableRole(dto.roleId());
 
-        // Si el último ADMIN activo cambia de rol, el sistema quedaría sin administrador
-        if (isActiveAdmin(existing)
-                && !ADMIN_ROLE.equals(role.getCode())
-                && repository.countByRoleCodeAndIsActiveTrue(ADMIN_ROLE) <= 1) {
+        // Un administrador no puede quitarse su propio rol ni dejar el sistema sin ADMIN
+        if (isActiveAdmin(existing) && !ADMIN_ROLE.equals(role.getCode())) {
 
-            throw new ResourceConflictException(
-                    "No se puede quitar el rol ADMIN al último administrador activo"
-            );
+            if (Objects.equals(id, currentUserId)) {
+                throw new ResourceConflictException(
+                        "Un administrador no puede quitarse su propio rol ADMIN"
+                );
+            }
+
+            if (repository.countByRoleCodeAndIsActiveTrue(ADMIN_ROLE) <= 1) {
+                throw new ResourceConflictException(
+                        "No se puede quitar el rol ADMIN al último administrador activo"
+                );
+            }
         }
 
         existing.setFullName(dto.fullName().trim());

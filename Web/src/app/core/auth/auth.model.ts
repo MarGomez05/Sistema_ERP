@@ -1,4 +1,8 @@
-export type RoleCode = 'ADMIN' | 'WAREHOUSE' | 'PURCHASING' | 'SELLER';
+// Los roles base del sistema; ADMIN puede crear roles adicionales desde el panel.
+export type KnownRoleCode = 'ADMIN' | 'WAREHOUSE' | 'PURCHASING' | 'SELLER';
+
+// El rol de la sesión puede ser cualquier código registrado en la base de datos.
+export type RoleCode = string;
 
 export interface AuthUser {
   id: number;
@@ -26,9 +30,18 @@ export interface StoredSession {
   expiresAt: number;
 }
 
-export const ROLE_LABELS: Record<RoleCode, string> = {
+export const ROLE_LABELS: Record<string, string> = {
   ADMIN: 'Administrador',
   WAREHOUSE: 'Bodega',
   PURCHASING: 'Compras',
   SELLER: 'Ventas',
 };
+
+// Los roles personalizados se muestran con su propio código.
+export function roleLabel(code: string | null | undefined): string {
+  if (!code) {
+    return '';
+  }
+
+  return ROLE_LABELS[code] ?? code;
+}
