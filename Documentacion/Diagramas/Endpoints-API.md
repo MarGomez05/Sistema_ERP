@@ -118,7 +118,11 @@ Valores de `error`: `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`
 |---|---|---|
 | `POST /api/auth/login` | Público | Login del cliente Angular |
 | `GET /api/auth/me` | Autenticado | Datos del usuario en sesión |
-| `GET /api/roles` | ADMIN | Roles para combos |
+| `GET /api/roles` | ADMIN | Listado completo de roles con estado y usuarios activos |
+| `GET /api/roles/options` | ADMIN | Roles activos para combos de asignación |
+| `POST /api/roles` | ADMIN | Crear rol |
+| `PUT /api/roles/{id}` | ADMIN | Editar nombre y descripción (el código no cambia) |
+| `PATCH /api/roles/{id}/status` | ADMIN | Activar / desactivar rol |
 | `GET /api/users` | ADMIN | Filtros: `search`, `roleId`, `isActive` |
 | `GET /api/users/{id}` | ADMIN | Detalle |
 | `POST /api/users` | ADMIN | Crear usuario (sin autorregistro) |
@@ -147,9 +151,21 @@ Reglas:
 
 **UserCreateRequest:** `username` (único, ≤ 50), `password` (≥ 8, BCrypt), `fullName` (≤ 150), `email` (opcional, ≤ 150), `roleId`.
 **UserUpdateRequest:** `fullName`, `email`, `roleId`.
-**UserResponse:** `id`, `username`, `fullName`, `email`, `role {id, name}`, `isActive`, `createdAt`, `updatedAt`.
+**UserResponse:** `id`, `username`, `fullName`, `email`, `role {id, code, name}`, `isActive`, `createdAt`, `updatedAt`.
 
-Un administrador no puede desactivarse a sí mismo ni dejar el sistema sin un `ADMIN` activo (409).
+**RoleCreateRequest:** `code` (obligatorio, ≤ 20, inicia con letra y solo admite letras y guiones bajos; se guarda en mayúsculas), `name` (obligatorio, ≤ 50, único sin distinguir mayúsculas), `description` (opcional, ≤ 255).
+**RoleUpdateRequest:** `name`, `description`. El código no se modifica porque la API lo usa para los permisos.
+**RoleResponse:** `id`, `code`, `name`, `description`, `isActive`, `activeUsers`.
+
+**RoleOption:** `id`, `code`, `name` de cada rol activo.
+
+Reglas de usuarios y roles:
+
+- Un administrador no puede desactivarse a sí mismo ni dejar el sistema sin un `ADMIN` activo (409).
+- Un administrador no puede quitarse su propio rol `ADMIN` (409).
+- El rol `ADMIN` no se puede desactivar (409).
+- Un rol con usuarios activos no se puede desactivar; primero se reasigna a esos usuarios (409).
+- Los roles nuevos se registran en el catálogo, pero sus permisos por módulo se habilitan en la configuración de seguridad del backend.
 
 ---
 

@@ -77,4 +77,15 @@ export const NAV_SECTIONS: readonly NavSection[] = [
       },
     ],
   },
+  {
+    label: 'Administración',
+    items: [
+      {
+        label: 'Usuarios y roles',
+        icon: 'users',
+        route: '/users',
+        roles: ['ADMIN'],
+      },
+    ],
+  },
 ];

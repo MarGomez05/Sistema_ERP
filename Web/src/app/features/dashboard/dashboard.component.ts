@@ -8,7 +8,7 @@ import {
 } from '@angular/core';
 
 import { AuthService } from '@core/auth/auth.service';
-import { ROLE_LABELS } from '@core/auth/auth.model';
+import { roleLabel as formatRoleLabel } from '@core/auth/auth.model';
 import { BadgeComponent, BadgeTone } from '@shared/ui/badge/badge.component';
 import { ButtonComponent } from '@shared/ui/button/button.component';
 import { BarChartComponent } from '@shared/ui/charts/bar-chart/bar-chart.component';
@@ -689,10 +689,7 @@ export class DashboardComponent implements OnInit {
 
   protected readonly username = computed(() => this.auth.user()?.username ?? '');
 
-  protected readonly roleLabel = computed(() => {
-    const role = this.role();
-    return role === null ? '' : ROLE_LABELS[role];
-  });
+  protected readonly roleLabel = computed(() => formatRoleLabel(this.role()));
 
   protected readonly greeting = computed(() => {
     const hour = new Date().getHours();

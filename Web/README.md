@@ -2,7 +2,7 @@
 
 Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre autenticación, layout, navegación por rol, panel general, catálogos e inventario, clientes, ventas con confirmación FEFO y cancelación, facturación con pagos y notas de crédito, y reportes con exportación de existencias.
 
-> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**; **7.5 completado** (18/11/2026) con **facturación, pagos, notas de crédito y descarga de PDF**, incluido el estado de facturación en ventas; **7.6 completado** (20/11/2026) con **reportes de ventas, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/Excel**.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**; **7.5 completado** (18/11/2026) con **facturación, pagos, notas de crédito y descarga de PDF**, incluido el estado de facturación en ventas; **7.6 completado** (20/11/2026) con **reportes de ventas, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/Excel**; **7.7 completado** (21/11/2026) con **administración de usuarios y roles** exclusiva de `ADMIN`.
 
 ---
 
@@ -214,6 +214,14 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - Exportación de existencias desde la misma pestaña: `GET /api/reports/stock/export?format=PDF|XLSX` descarga `existencias-<fecha>.pdf` o `.xlsx` con el filtro de categoría aplicado. Los botones indican la carga y los errores se notifican con un aviso.
 - `report.model.ts` centraliza los tipos del contrato, etiquetas y tonos de los tramos de antigüedad, el formato de cantidades y el nombre del archivo exportado.
 
+### Usuarios y roles (7.7 completado)
+
+- Nueva página `/users` con pestañas «Usuarios» y «Roles», accesible solo para `ADMIN` tanto en la ruta (`roleGuard`) como en el menú lateral; la API aplica la misma restricción en `/api/users/**` y `/api/roles/**`.
+- «Usuarios»: listado paginado con búsqueda por usuario, nombre o correo, filtro por rol y por estado. El panel lateral permite crear (`username`, contraseña inicial, nombre completo, correo opcional y rol) y editar (nombre, correo y rol; el nombre de usuario no cambia). El estado se activa o desactiva con confirmación en la fila.
+- «Roles»: catálogo completo con código, nombre, descripción, usuarios activos y estado. Se pueden crear roles nuevos y editar nombre y descripción; el código se normaliza a mayúsculas al crear y no se modifica después porque la API lo usa para autorizar.
+- Protecciones visibles y validadas por el backend: el rol `ADMIN` no se desactiva, un rol con usuarios activos no se desactiva, y un administrador no puede desactivar su propio usuario ni quitarse su propio rol `ADMIN`. Los botones inhabilitados explican el motivo.
+- `admin.model.ts` y `admin.service.ts` centralizan el contrato, las etiquetas, los tonos de rol, las reglas de desactivación y los payloads con recorte y conversión de vacíos a `null`.
+
 ---
 
 ## 4. Identidad visual
@@ -314,6 +322,7 @@ Alias de importación disponibles: `@core/*`, `@shared/*`, `@layout/*`, `@featur
 | `/invoices` | `ADMIN`, `PURCHASING`, `SELLER` | Listado de facturas y notas de crédito |
 | `/invoices/:id` | `ADMIN`, `PURCHASING`, `SELLER` | Detalle, pagos (`ADMIN`/`SELLER`) y nota de crédito (`ADMIN`) |
 | `/reports` | `ADMIN`, `WAREHOUSE`, `PURCHASING`, `SELLER` | Reportes; pestañas y exportación según el rol |
+| `/users` | `ADMIN` | Administración de usuarios y roles |
 | `/` | Autenticados | Redirige a `/dashboard` |
 | `**` | Público | Página no encontrada |
 
@@ -388,6 +397,7 @@ Salida: `dist/tamachihua-web/browser`.
 | 7.4 Ventas | Listado, nueva venta, detalle, confirmación y cancelación — **completado** |
 | 7.5 Facturación | Emisión, detalle, pagos y notas de crédito — **completado** |
 | 7.6 Reportes | Ventas por período, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/Excel — **completado** |
+| 7.7 Usuarios y roles | Administración de usuarios (alta, edición y estado) y roles (alta, edición y estado) exclusiva de `ADMIN` — **completado** |
 
 Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 

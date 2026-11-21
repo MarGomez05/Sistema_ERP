@@ -38,4 +38,6 @@ public interface UserRepository
 
     // Un administrador no puede dejar el sistema sin un ADMIN activo (contrato 3)
     long countByRoleCodeAndIsActiveTrue(String roleCode);
+
+    long countByRoleIdAndIsActiveTrue(Long roleId);
 }

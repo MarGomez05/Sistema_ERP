@@ -17,6 +17,7 @@ public class UserMapper {
                 user.getEmail(),
                 new RoleSummaryDto(
                         user.getRole().getId(),
+                        user.getRole().getCode(),
                         user.getRole().getName()
                 ),
                 user.getIsActive(),
