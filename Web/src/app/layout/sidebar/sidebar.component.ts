@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject, input, output } f
 import { RouterLink, RouterLinkActive } from '@angular/router';
 
 import { AuthService } from '@core/auth/auth.service';
+import { ThemeService } from '@core/ui/theme.service';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 import { environment } from '@env/environment';
 import { NAV_SECTIONS, NavItem } from '../nav.config';
@@ -27,7 +28,7 @@ import { NAV_SECTIONS, NavItem } from '../nav.config';
               height="34"
             />
           } @else {
-            <img class="sidebar__logo" src="brand/logo-horizontal.png" alt="TAMACHIHUA ERP" />
+            <img class="sidebar__logo" [src]="logoSrc()" alt="TAMACHIHUA ERP" />
           }
         </a>
 
@@ -291,6 +292,7 @@ import { NAV_SECTIONS, NavItem } from '../nav.config';
 })
 export class SidebarComponent {
   private readonly auth = inject(AuthService);
+  private readonly theme = inject(ThemeService);
 
   readonly collapsed = input(false);
   readonly mobileOpen = input(false);
@@ -299,6 +301,11 @@ export class SidebarComponent {
   readonly navigated = output<void>();
 
   protected readonly version = environment.version;
+
+  // El logotipo blanco mantiene la lectura sobre el fondo oscuro cálido.
+  protected readonly logoSrc = computed(() =>
+    this.theme.isDark() ? 'brand/logo-horizontal-blanco.png' : 'brand/logo-horizontal.png',
+  );
 
   // En móvil el panel abierto siempre muestra etiquetas, aunque esté contraído.
   protected readonly compact = computed(() => this.collapsed() && !this.mobileOpen());

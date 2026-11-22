@@ -13,6 +13,7 @@
   --brand-200: #c7e2f5;
   --brand-100: #e3f0fa;
   --brand-50: #f2f8fd;
+  --brand-solid: #004b87;
 
   --accent-600: #0089d1;
   --accent-500: #00a8ff;
@@ -31,6 +32,8 @@
   --text-muted: #5b6b7a;
   --text-subtle: #8796a4;
   --text-inverse: #ffffff;
+  --header-bg: rgba(255, 255, 255, 0.88);
+  --skeleton-highlight: #eef3f8;
 
   // Estados
   --success-700: #1d7a51;
@@ -42,6 +45,7 @@
   --danger-700: #9f2f28;
   --danger-500: #c5443b;
   --danger-100: #fbeae9;
+  --danger-border: #f0cdca;
   --info-700: #0663a8;
   --info-500: #2a8cd6;
   --info-100: #e9f3fb;
@@ -110,4 +114,70 @@
   --space-9: 56px;
 
   color-scheme: light;
+}
+
+// =====================================================================
+// Tema oscuro cálido: carbón con matices ámbar y arena.
+// Se activa con data-theme="dark" en <html>.
+// =====================================================================
+:root[data-theme='dark'] {
+  // Marca: azul aclarado para texto y acentos sobre superficies oscuras.
+  --brand-700: #8fccf2;
+  --brand-600: #6fbce9;
+  --brand-500: #4ba7dd;
+  --brand-400: #5bb4e8;
+  --brand-300: #3a6f8f;
+  --brand-200: #315467;
+  --brand-100: #243845;
+  --brand-50: #1e2b33;
+  --brand-solid: #0b4f7d;
+
+  // Acento cálido para detalles, gráficas y estados suaves.
+  --accent-600: #e6ab70;
+  --accent-500: #d99552;
+  --accent-200: #6b4a2e;
+  --accent-100: #3a2a1c;
+  --accent-50: #2a2119;
+
+  // Superficies y texto con temperatura cálida.
+  --canvas: #171310;
+  --surface: #211b17;
+  --surface-muted: #1b1613;
+  --surface-hover: #2a221c;
+  --border: #3a2f27;
+  --border-strong: #4d3f34;
+  --text: #f5ede4;
+  --text-muted: #c9b8a8;
+  --text-subtle: #a08d7b;
+  --text-inverse: #ffffff;
+  --header-bg: rgba(33, 27, 23, 0.88);
+  --skeleton-highlight: #302720;
+
+  // Estados legibles sobre fondos oscuros.
+  --success-700: #8fe0b5;
+  --success-500: #4fbd8b;
+  --success-100: #1f3328;
+  --warning-700: #f2cf87;
+  --warning-500: #d9a441;
+  --warning-100: #3a2d17;
+  --danger-700: #f4a79e;
+  --danger-500: #dc7268;
+  --danger-100: #3a211d;
+  --danger-border: #5c3833;
+  --info-700: #9fd0f2;
+  --info-500: #5cb4e6;
+  --info-100: #1d3040;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.32);
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3), 0 2px 6px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 10px 28px rgba(0, 0, 0, 0.34);
+  --shadow-lg: 0 22px 48px rgba(0, 0, 0, 0.42);
+
+  --gradient-brand: linear-gradient(135deg, #0b4f7d 0%, #1877b6 48%, #2f9bd4 100%);
+  --gradient-soft: linear-gradient(135deg, #2a211a 0%, #241d18 100%);
+  --gradient-danger: linear-gradient(135deg, #6d2a22 0%, var(--danger-500) 100%);
+  --shadow-brand: 0 10px 22px -8px rgba(20, 120, 190, 0.55);
+  --shadow-brand-strong: 0 16px 30px -10px rgba(20, 120, 190, 0.62);
+
+  color-scheme: dark;
 }

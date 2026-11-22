@@ -768,7 +768,7 @@ import { SaleService } from '../sale.service';
     .cancel-card {
       padding: var(--space-5);
       background: var(--surface);
-      border: 1px solid #f0cdca;
+      border: 1px solid var(--danger-border);
       border-radius: var(--radius-lg);
       box-shadow: var(--shadow-sm);
     }

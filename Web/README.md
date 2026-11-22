@@ -1,8 +1,8 @@
 # TAMACHIHUA ERP · Cliente web Angular
 
-Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre autenticación, layout, navegación por rol, panel general, catálogos e inventario, clientes, ventas con confirmación FEFO y cancelación, facturación con pagos y notas de crédito, y reportes con exportación de existencias.
+Cliente web único del ERP TAMACHIHUA, construido con **Angular 22 standalone**. Consume la API REST de Spring Boot en `/api` y cubre autenticación, layout, navegación por rol, panel general, catálogos e inventario, clientes, ventas con confirmación FEFO y cancelación, facturación con pagos y notas de crédito, reportes con exportación de existencias, administración de usuarios y roles, y un tema claro/oscuro cálido con logotipo alterno.
 
-> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**; **7.5 completado** (18/11/2026) con **facturación, pagos, notas de crédito y descarga de PDF**, incluido el estado de facturación en ventas; **7.6 completado** (20/11/2026) con **reportes de ventas, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/Excel**; **7.7 completado** (21/11/2026) con **administración de usuarios y roles** exclusiva de `ADMIN`.
+> Estado: **Fase 7.1 completada** (16/11/2026), con el rediseño visual **7.1.1** (17/11/2026), y **7.2 completado** (17/11/2026) con los módulos de **catálogos de inventario**, **productos, presentaciones y precios** y **lotes**; **7.3 completado** (17/11/2026) con **clientes**; **7.4 completado** (17/11/2026) con **ventas**; **7.5 completado** (18/11/2026) con **facturación, pagos, notas de crédito y descarga de PDF**, incluido el estado de facturación en ventas; **7.6 completado** (20/11/2026) con **reportes de ventas, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/Excel**; **7.7 completado** (21/11/2026) con **administración de usuarios y roles** exclusiva de `ADMIN`, y **7.8 completado** (21/11/2026) con **tema claro/oscuro cálido**, conmutador en el encabezado y logotipo alterno.
 
 ---
 
@@ -222,6 +222,14 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - Protecciones visibles y validadas por el backend: el rol `ADMIN` no se desactiva, un rol con usuarios activos no se desactiva, y un administrador no puede desactivar su propio usuario ni quitarse su propio rol `ADMIN`. Los botones inhabilitados explican el motivo.
 - `admin.model.ts` y `admin.service.ts` centralizan el contrato, las etiquetas, los tonos de rol, las reglas de desactivación y los payloads con recorte y conversión de vacíos a `null`.
 
+### Tema claro y oscuro cálido
+
+- El encabezado incluye un botón junto a la información del usuario para alternar entre el tema claro y un tema oscuro cálido. Usa iconos `sun`/`moon`, etiqueta accesible y título dinámico.
+- `ThemeService` (`core/ui/theme.service.ts`) guarda la preferencia en `localStorage` (`tamachihua.theme`), respeta `prefers-color-scheme` cuando no hay elección previa y actualiza `data-theme`, `color-scheme` y `meta[name="theme-color"]`.
+- `index.html` aplica el tema antes del primer render para evitar el destello claro al recargar.
+- La paleta oscura vive en `tokens.scss`: superficies carbón con matiz ámbar, texto arena, bordes marrón cálido, estados legibles y acento ámbar. El modo claro conserva la identidad original.
+- En oscuro, la barra lateral, la página 404 y el login móvil usan `brand/logo-horizontal-blanco.png`; el panel de marca del login mantiene su azul profundo en ambos temas.
+
 ---
 
 ## 4. Identidad visual
@@ -398,6 +406,7 @@ Salida: `dist/tamachihua-web/browser`.
 | 7.5 Facturación | Emisión, detalle, pagos y notas de crédito — **completado** |
 | 7.6 Reportes | Ventas por período, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/Excel — **completado** |
 | 7.7 Usuarios y roles | Administración de usuarios (alta, edición y estado) y roles (alta, edición y estado) exclusiva de `ADMIN` — **completado** |
+| 7.8 Tema claro/oscuro | Conmutador en el encabezado, paleta oscura cálida, persistencia y logotipo alterno — **completado** |
 
 Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
@@ -405,7 +414,7 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 
 ## 11. Limitaciones conocidas
 
-- Solo el panel general, los catálogos, los productos con sus presentaciones y precios, los lotes, los clientes, las ventas, la facturación y los reportes están implementados.
+- Solo el panel general, los catálogos, los productos con sus presentaciones y precios, los lotes, los clientes, las ventas, la facturación, los reportes y la administración de usuarios y roles están implementados.
 - El alta de lotes requiere el catálogo de proveedores, por lo que `WAREHOUSE` puede corregir cantidades pero no registrar ingresos desde la interfaz.
 - `PURCHASING` puede consultar lotes con costos y filtrar por proveedor, pero no registrar ingresos ni corregir cantidades.
 - Las condiciones de crédito y el estado de un cliente solo los modifica `ADMIN`; `SELLER` puede crear y editar los datos básicos, y al crear el cliente la línea de crédito queda en cero.
@@ -421,6 +430,7 @@ Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
 - No hay entorno de producción ni pipeline de despliegue del frontend todavía.
 - En producción se requiere un proxy inverso que enrute `/api` al backend y sirva el `index.html` para las rutas del router.
 - No hay pruebas E2E de navegador; la verificación actual es build, pruebas unitarias y arranque con proxy.
+- Los temas claro y oscuro están pendientes de validación visual en navegador con backend y datos reales.
 
 ---
 

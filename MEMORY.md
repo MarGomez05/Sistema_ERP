@@ -1,8 +1,8 @@
 # MEMORY.md — TAMACHIHUA-ERP
 
 > Memoria viva del proyecto. Leer al inicio de cada tarea y actualizar al finalizar.
-> Última actualización: 20/11/2026.
-> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1**; **7.2 completado** con los módulos de **catálogos**, **productos con sus presentaciones**, **precios con historial** y **lotes con corrección de cantidad**, **7.3 completado** con **clientes** (listado, detalle, alta, edición, estado y crédito), **7.4 completado** con **ventas** (listado, alta, edición, detalle, confirmación y cancelación), **7.5 completado** con **facturación** (emisión, detalle, pagos, nota de crédito y PDF) y **7.6 completado** con **reportes** (ventas por período, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/XLSX), más un sistema de botones con degradado de marca. El precio de línea de venta quedó de solo lectura y el estado de facturación se muestra en ventas. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 104 pruebas en verde.
+> Última actualización: 21/11/2026.
+> Estado: Fases 2 a 6 completadas (Flyway V1–V6, clientes, ventas con FEFO, facturación e imágenes por URL), **Fase 7.1 completada** (base del frontend Angular: login, shell, guards, dashboard y 404) con el rediseño visual **7.1.1**; **7.2 completado** con los módulos de **catálogos**, **productos con sus presentaciones**, **precios con historial** y **lotes con corrección de cantidad**, **7.3 completado** con **clientes** (listado, detalle, alta, edición, estado y crédito), **7.4 completado** con **ventas** (listado, alta, edición, detalle, confirmación y cancelación), **7.5 completado** con **facturación** (emisión, detalle, pagos, nota de crédito y PDF), **7.6 completado** con **reportes** (ventas por período, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/XLSX) y **7.7 completado** con **usuarios y roles** exclusivos de `ADMIN`, más un sistema de botones con degradado de marca y un **tema oscuro cálido** con conmutador claro/oscuro. El precio de línea de venta quedó de solo lectura y el estado de facturación se muestra en ventas. API validada con `validate`, pruebas unitarias y E2E de endpoints; frontend compilado y con 117 pruebas en verde.
 
 ## 1. Resumen
 
@@ -270,6 +270,24 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 - Verificación: backend `compile` y pruebas unitarias de reportes, PDF y propiedades en verde; frontend `npm run build` en verde (inicial 316.17 kB, módulo de reportes 36.09 kB) y `npm test -- --watch=false` con 104 pruebas en verde. La suite completa con Testcontainers sigue bloqueada por falta de Docker.
 - Pendiente: validar los reportes y las descargas en navegador con backend y datos reales.
 
+### Avance 21/11/2026 — Fase 7.7 (Usuarios y roles)
+
+- Backend: `RoleController` ampliado con `GET /api/roles`, `GET /api/roles/options`, `POST /api/roles`, `PUT /api/roles/{id}` y `PATCH /api/roles/{id}/status`; `RoleService`/`RoleServiceImpl` implementan listado, creación, edición y baja lógica. DTOs nuevos en `dto/role/` y `RoleSummaryDto` ahora incluye `code`.
+- El código del rol se normaliza a mayúsculas y no se puede cambiar al editar porque la seguridad lo usa para autorizar. `GET /api/roles` devuelve `activeUsers`; `/options` solo entrega roles activos.
+- Reglas: el rol `ADMIN` no se desactiva; un rol con usuarios activos no se desactiva; un administrador no puede desactivar su propio usuario, quitarse su propio rol `ADMIN` ni dejar el sistema sin un `ADMIN` activo.
+- Seguridad: `/api/users/**` y `/api/roles/**` quedan exclusivos de `ADMIN` en `SecurityConfig`.
+- Frontend: `/users` con pestañas «Usuarios» y «Roles», ruta `roleGuard` solo `ADMIN` y nueva sección «Administración» en el menú. Usuarios permite listar con filtros, crear, editar y activar/desactivar con confirmación; roles permite crear, editar nombre/descripción y activar/desactivar, con botones inhabilitados y explicación cuando la regla lo impide.
+- Pruebas nuevas: `RoleServiceImplTest` y `UserServiceImplTest` (18 casos) en backend; `admin.model.spec.ts` (5 casos) en frontend. Verificación: backend `compile` y pruebas de usuarios/roles en verde; frontend build en verde y 113 pruebas.
+
+### Avance 21/11/2026 — Tema claro y oscuro cálido
+
+- `ThemeService` (`Web/src/app/core/ui/theme.service.ts`) administra los temas `light`/`dark`, persiste la elección en `localStorage` (`tamachihua.theme`), respeta `prefers-color-scheme` cuando no hay preferencia y actualiza `data-theme`, `color-scheme` y el `meta[name="theme-color"]`.
+- `index.html` aplica el tema antes del primer render para evitar el destello claro.
+- Botón de tema en el encabezado, junto a la información del usuario, con iconos `sun`/`moon`, etiqueta accesible y título dinámico.
+- `tokens.scss` agrega una paleta oscura cálida (carbón con matiz ámbar, texto arena y bordes marrón) y tokens auxiliares (`--danger-border`, `--skeleton-highlight`, `--header-bg`, `--brand-solid`). El modo claro conserva la paleta original.
+- Los logotipos cambian por tema: barra lateral, 404 y login móvil usan `logo-horizontal-blanco.png` en oscuro; el panel de marca del login conserva siempre su azul profundo.
+- Pruebas nuevas: `theme.service.spec.ts` (4 casos). Verificación: frontend build en verde (inicial 320.80 kB) y 117 pruebas en verde. Pendiente validar visualmente ambos temas en navegador con backend y datos reales.
+
 ### Documentación completada en esta rama
 
 - `AGENTS.md` en español con stack, convenciones, patrones, prohibiciones, estructura, flujo, testing y memoria.
@@ -314,6 +332,8 @@ La nueva etapa convierte el sistema en un ERP comercial con:
 | D-27 | Facturación se consulta en `/invoices` y `/invoices/:id` con lectura `ADMIN`/`PURCHASING`/`SELLER`. La emisión se hace desde el detalle de una venta `CONFIRMED` (`ADMIN`/`SELLER`) y no desde el listado. Pagos y nota de crédito viven en paneles laterales exclusivos del detalle; los pagos son `ADMIN`/`SELLER` y la nota de crédito solo `ADMIN`. El vencimiento se calcula visualmente, no cambia el estado del backend. Sin PDF hasta que exista el endpoint | Reemplazada por D-28 |
 | D-28 | El precio de línea de venta es de solo lectura en la web y se toma del precio vigente; el costo unitario de lotes sigue editable porque proviene de la factura del proveedor. `GET /api/invoices/{id}/pdf` genera el documento con Apache PDFBox desde el snapshot y datos de empresa configurables. Las ventas exponen `invoiceId`/`invoiceNumber` para mostrar «Facturada»/«Sin facturar» y ocultar la emisión duplicada | Aplicada |
 | D-29 | Reportes vive en `/reports` con pestañas por rol. Backend: `GET /api/reports/sales`, `/receivables`, `/top-products`, `/stock` y `/stock/export`; comerciales para `ADMIN`/`PURCHASING`/`SELLER` y existencias para `ADMIN`/`WAREHOUSE`/`PURCHASING`. El export usa PDFBox para PDF y Apache POI para XLSX, sin estado persistido | Aplicada |
+| D-30 | Usuarios y roles se administran solo con `ADMIN` en `/users`. `/api/roles` expone listado completo y opciones activas, y permite crear, editar nombre/descripción y cambiar estado. El código del rol es inmutable y se normaliza a mayúsculas; `ADMIN` y los roles con usuarios activos no se desactivan. Los roles nuevos se registran en el catálogo y sus permisos por módulo se habilitan en `SecurityConfig` | Aplicada |
+| D-31 | El tema visual se elige entre claro y oscuro cálido desde el encabezado. `ThemeService` persiste la preferencia en `localStorage`, respeta `prefers-color-scheme` y aplica `data-theme` en `<html>`; los tokens oscuros viven en `tokens.scss`. En oscuro se usa el logotipo blanco en barra lateral, 404 y login móvil, y el panel de marca del login conserva su azul profundo | Aplicada |
 
 ## 5. Reglas de negocio clave
 
@@ -465,7 +485,8 @@ npm test -- --watch=false
 - Agregar pruebas de integración con MockMvc, concurrencia y seguridad.
 - Ejecutar la suite con Testcontainers cuando haya Docker disponible.
 - Configurar CI/CD.
-- Frontend: entregables 7.2, 7.3, 7.4, 7.5 y 7.6 completados (inventario, clientes, ventas, facturación y reportes).
+- Frontend: entregables 7.2, 7.3, 7.4, 7.5, 7.6 y 7.7 completados (inventario, clientes, ventas, facturación, reportes, usuarios y roles).
+- Frontend: validar visualmente el tema claro y el tema oscuro cálido, y el cambio de logotipo, en navegador con backend y credenciales reales; el entorno no tiene Docker ni PostgreSQL disponibles.
 - Frontend: validar en navegador los reportes y las descargas PDF/XLSX de existencias con backend y datos reales; el entorno no tiene Docker ni PostgreSQL disponibles.
 - Frontend: validar visualmente el rediseño 7.1.1 en navegador con backend y credenciales reales; en el entorno de trabajo no estaban disponibles.
 - Frontend: validar en navegador la insignia de facturación y la descarga de PDF con backend y credenciales reales; el entorno no tenía Docker ni PostgreSQL disponibles.

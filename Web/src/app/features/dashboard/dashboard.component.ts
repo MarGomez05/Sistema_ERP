@@ -450,7 +450,7 @@ const LOW_STOCK_PAGE_SIZE = 10;
       padding: 16px 18px;
       margin-bottom: var(--space-5);
       background: var(--danger-100);
-      border: 1px solid #f0cdca;
+      border: 1px solid var(--danger-border);
       border-radius: var(--radius-lg);
       color: var(--danger-700);
       font-size: var(--text-sm);

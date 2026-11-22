@@ -10,6 +10,7 @@ import {
 import { ActivatedRoute, Router } from '@angular/router';
 
 import { AuthService, loginErrorMessage } from '@core/auth/auth.service';
+import { ThemeService } from '@core/ui/theme.service';
 import { ToastService } from '@core/ui/toast.service';
 import { ButtonComponent } from '@shared/ui/button/button.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
@@ -102,7 +103,7 @@ import { environment } from '@env/environment';
       <section class="login__panel">
         <img
           class="login__mobile-logo"
-          src="brand/logo-horizontal.png"
+          [src]="logoSrc()"
           alt="TAMACHIHUA ERP"
           width="2181"
           height="420"
@@ -247,7 +248,7 @@ import { environment } from '@env/environment';
       background:
         radial-gradient(1200px 620px at 8% -10%, rgba(0, 170, 255, 0.62), transparent 62%),
         radial-gradient(900px 520px at 100% 105%, rgba(0, 168, 255, 0.18), transparent 60%),
-        linear-gradient(150deg, var(--brand-700) 0%, var(--brand-600) 48%, #05558f 100%);
+        linear-gradient(150deg, #004b87 0%, #0663a8 48%, #05558f 100%);
       color: #eaf4fc;
     }
 
@@ -303,7 +304,7 @@ import { environment } from '@env/environment';
       width: 6px;
       height: 6px;
       border-radius: 50%;
-      background: var(--accent-200);
+      background: #b8e6ff;
       box-shadow: 0 0 0 4px rgba(184, 230, 255, 0.18);
     }
 
@@ -318,7 +319,7 @@ import { environment } from '@env/environment';
 
     .login__eyebrow {
       margin-bottom: 14px;
-      color: var(--accent-200);
+      color: #b8e6ff;
       font-size: var(--text-xs);
       font-weight: var(--weight-semibold);
       letter-spacing: 0.16em;
@@ -402,7 +403,7 @@ import { environment } from '@env/environment';
       background: rgba(0, 168, 255, 0.16);
       border: 1px solid rgba(0, 168, 255, 0.28);
       border-radius: var(--radius-pill);
-      color: var(--accent-200);
+      color: #b8e6ff;
       font-size: 0.5625rem;
       font-weight: var(--weight-semibold);
       letter-spacing: 0.1em;
@@ -432,7 +433,7 @@ import { environment } from '@env/environment';
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.16);
       border-radius: 10px;
-      color: var(--accent-200);
+      color: #b8e6ff;
     }
 
     .login__feature-copy {
@@ -615,7 +616,7 @@ import { environment } from '@env/environment';
       gap: 10px;
       padding: 12px 14px;
       background: var(--danger-100);
-      border: 1px solid #f0cdca;
+      border: 1px solid var(--danger-border);
       border-radius: var(--radius-md);
       color: var(--danger-700);
       font-size: var(--text-sm);
@@ -687,10 +688,14 @@ export class LoginComponent {
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
   private readonly toast = inject(ToastService);
+  private readonly theme = inject(ThemeService);
 
   private readonly formBuilder = inject(FormBuilder);
 
   protected readonly version = environment.version;
+
+  protected readonly logoSrc = () =>
+    this.theme.isDark() ? 'brand/logo-horizontal-blanco.png' : 'brand/logo-horizontal.png';
   protected readonly showPassword = signal(false);
   protected readonly submitting = signal(false);
   protected readonly errorMessage = signal<string | null>(null);

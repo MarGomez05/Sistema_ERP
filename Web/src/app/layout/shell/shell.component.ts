@@ -65,7 +65,7 @@ const COLLAPSED_KEY = 'tamachihua.sidebar.collapsed';
       left: 10px;
       z-index: 2000;
       padding: 10px 16px;
-      background: var(--brand-600);
+      background: var(--brand-solid);
       border-radius: var(--radius-md);
       color: var(--text-inverse);
       font-size: var(--text-sm);
