@@ -434,7 +434,7 @@ Reglas:
 
 ## 9. Frontend Angular
 
-> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, productos, precios, lotes, clientes, ventas, facturación y reportes de los entregables 7.2 a 7.6 están completos sobre esta base.
+> Entregable 7.1 implementado en `Web/`. Los módulos de catálogos, productos, precios, lotes, clientes, ventas, facturación, reportes, usuarios y roles de los entregables 7.2 a 7.7 están completos sobre esta base, junto con el tema claro/oscuro cálido.
 
 ### 9.1 Ubicación
 
@@ -642,6 +642,35 @@ Implementado el 20/11/2026:
 - Pruebas nuevas en `report.model.spec.ts` (4 casos).
 - Verificación: backend `compile` y pruebas unitarias de reportes, PDF y propiedades en verde; frontend `npm run build` en verde (inicial 316.17 kB, módulo de reportes en 36.09 kB) y `npm test -- --watch=false` con 104 pruebas en verde. La suite completa con Testcontainers no se ejecutó por falta de Docker.
 
+### 9.15 Usuarios y roles (fase 7.7)
+
+Implementado el 21/11/2026:
+
+- Backend: `RoleService`/`RoleServiceImpl` y `RoleController` bajo `/api/roles` con listado completo, opciones activas, creación, edición y cambio de estado. `UserController` y `UserService` ya cubrían el CRUD paginado de usuarios.
+- `GET /api/roles` devuelve `id`, `code`, `name`, `description`, `isActive` y `activeUsers`; `GET /api/roles/options` devuelve solo los roles activos para los combos.
+- `POST /api/roles` normaliza el código a mayúsculas y valida formato `^[A-Za-z][A-Za-z_]*$`, unicidad de código y nombre. `PUT /api/roles/{id}` edita nombre y descripción sin cambiar el código. `PATCH /api/roles/{id}/status` activa o desactiva.
+- Reglas: el rol `ADMIN` no se desactiva; un rol con usuarios activos no se desactiva; un administrador no puede desactivar su propio usuario, quitarse su propio rol `ADMIN` ni dejar el sistema sin un `ADMIN` activo.
+- Seguridad: `/api/users/**` y `/api/roles/**` quedan exclusivos de `ADMIN` en `SecurityConfig`.
+- DTOs nuevos en `dto/role/`: `RoleCreateRequestDto`, `RoleUpdateRequestDto`, `RoleOptionDto` y `RoleResponseDto` ampliado. `RoleSummaryDto` ahora incluye `code`.
+- Frontend: página `/users` con pestañas «Usuarios» y «Roles», ruta protegida con `roleGuard` y entrada «Usuarios y roles» en la sección «Administración» para `ADMIN`.
+- «Usuarios»: listado paginado con búsqueda, filtro por rol y estado; alta con `username`, contraseña inicial, nombre, correo y rol; edición de nombre, correo y rol; activación/desactivación con confirmación en la fila.
+- «Roles»: catálogo con código, nombre, descripción, usuarios activos y estado; creación, edición y activación/desactivación con las mismas protecciones del backend y botones inhabilitados con explicación.
+- Pruebas nuevas: `RoleServiceImplTest` (9 casos) y `UserServiceImplTest` (9 casos) en backend; `admin.model.spec.ts` (5 casos) en frontend.
+- Verificación: backend `compile` y pruebas de usuarios/roles en verde; frontend build en verde y `npm test -- --watch=false` con 113 pruebas en verde. La suite completa con Testcontainers sigue bloqueada por falta de Docker.
+
+### 9.16 Tema claro y oscuro cálido
+
+Implementado el 21/11/2026:
+
+- `ThemeService` (`core/ui/theme.service.ts`) mantiene el tema `light`/`dark`, lo persiste en `localStorage` (`tamachihua.theme`), respeta la preferencia del sistema cuando no hay valor guardado y actualiza `data-theme`, `color-scheme` y el `meta[name="theme-color"]`.
+- `index.html` aplica el tema antes del primer render con un script mínimo para evitar el destello claro.
+- El encabezado incorpora un botón junto a la información del usuario con iconos `sun`/`moon`, etiqueta accesible y título dinámico.
+- `tokens.scss` define una paleta oscura cálida: superficies carbón con matiz ámbar, texto arena, bordes marrón cálido, estados legibles y un acento ámbar. El modo claro conserva la paleta original.
+- Los logotipos cambian según el tema: barra lateral y página 404 usan `brand/logo-horizontal-blanco.png` en oscuro y el logo a color en claro; el login móvil aplica la misma regla. El panel de marca del login conserva siempre su azul profundo.
+- Se centralizaron colores auxiliares en tokens (`--danger-border`, `--skeleton-highlight`, `--header-bg`, `--brand-solid`) para que tablas, formularios, insignias, skeletons y cabecera respondan al tema.
+- Pruebas nuevas en `theme.service.spec.ts` (4 casos).
+- Verificación: frontend `npm run build` en verde (inicial 320.80 kB) y `npm test -- --watch=false` con 117 pruebas en verde. Pendiente validar visualmente ambos temas en navegador con backend y datos reales.
+
 ## 10. Testing y CI/CD
 
 ### 10.1 Backend
@@ -742,7 +771,7 @@ Por cada entregable crea una nueva rama con el título representativo que se har
 | 4 | Ventas: crear, editar, confirmar, cancelar, FEFO y concurrencia | **Completada (14/11/2026)** |
 | 5 | Facturación: emisión, numeración, snapshot, pagos y notas de crédito | **Completada (16/11/2026)** |
 | 6 | Imagen por presentación: columnas, DTOs y endpoint de carga | **Completada (16/11/2026)** |
-| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones, precios con historial y lotes completados (17/11/2026); 7.3 clientes completado (17/11/2026); 7.4 ventas completado (17/11/2026); 7.5 facturación, pagos, nota de crédito y PDF completado (18/11/2026); 7.6 reportes completado (20/11/2026) |
+| 7 | Frontend Angular | **En progreso**: 7.1 base y 7.1.1 rediseño completados (16–17/11/2026); 7.2 catálogos, productos con presentaciones, precios con historial y lotes completados (17/11/2026); 7.3 clientes completado (17/11/2026); 7.4 ventas completado (17/11/2026); 7.5 facturación, pagos, nota de crédito y PDF completado (18/11/2026); 7.6 reportes completado (20/11/2026); 7.7 usuarios y roles y tema oscuro cálido completados (21/11/2026) |
 | 8 | Reportes | **Completada (20/11/2026)**: ventas por período, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/XLSX |
 | 9 | Endurecimiento | Pendiente |
 

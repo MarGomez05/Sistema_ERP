@@ -11,6 +11,7 @@ import { RouterLink } from '@angular/router';
 
 import { AuthService } from '@core/auth/auth.service';
 import { roleLabel as formatRoleLabel } from '@core/auth/auth.model';
+import { ThemeService } from '@core/ui/theme.service';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
 @Component({
@@ -37,6 +38,16 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       </div>
 
       <div class="header__right">
+        <button
+          type="button"
+          class="header__theme"
+          [attr.aria-label]="themeLabel()"
+          [attr.title]="themeLabel()"
+          (click)="theme.toggle()"
+        >
+          <app-icon [name]="theme.isDark() ? 'sun' : 'moon'" [size]="18" />
+        </button>
+
         <div class="header__user">
           <button
             type="button"
@@ -80,7 +91,7 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       gap: var(--space-4);
       height: var(--header-height);
       padding: 0 24px;
-      background: rgba(255, 255, 255, 0.88);
+      background: var(--header-bg);
       border-bottom: 1px solid var(--border);
       backdrop-filter: blur(10px);
     }
@@ -149,6 +160,38 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       gap: 12px;
     }
 
+    .header__theme {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      background: var(--surface-muted);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-pill);
+      color: var(--text-muted);
+      transition:
+        background var(--transition-fast),
+        border-color var(--transition-fast),
+        color var(--transition-fast),
+        transform var(--transition-fast);
+    }
+
+    .header__theme:hover {
+      background: var(--surface-hover);
+      border-color: var(--accent-500);
+      color: var(--accent-600);
+      transform: translateY(-1px);
+    }
+
+    :host-context(:root[data-theme='dark']) .header__theme {
+      color: var(--accent-600);
+    }
+
+    :host-context(:root[data-theme='dark']) .header__theme:hover {
+      box-shadow: 0 0 18px -6px var(--accent-500);
+    }
+
     .header__user {
       position: relative;
     }
@@ -178,7 +221,7 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       width: 36px;
       height: 36px;
       border-radius: 50%;
-      background: linear-gradient(135deg, var(--brand-500), var(--brand-700));
+      background: var(--gradient-brand);
       color: var(--text-inverse);
       font-size: var(--text-xs);
       font-weight: var(--weight-bold);
@@ -287,12 +330,18 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 export class HeaderComponent {
   private readonly auth = inject(AuthService);
 
+  protected readonly theme = inject(ThemeService);
+
   readonly pageTitle = input.required<string>();
 
   readonly toggleMobile = output<void>();
 
   protected readonly user = this.auth.user;
   protected readonly userMenuOpen = signal(false);
+
+  protected readonly themeLabel = computed(() =>
+    this.theme.isDark() ? 'Cambiar a tema claro' : 'Cambiar a tema oscuro',
+  );
 
   protected readonly roleLabel = computed(() => formatRoleLabel(this.user()?.role));
 

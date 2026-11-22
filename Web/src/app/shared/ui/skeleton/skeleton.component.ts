@@ -17,7 +17,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
       background: linear-gradient(
         90deg,
         var(--surface-muted) 25%,
-        #eef3f8 37%,
+        var(--skeleton-highlight) 37%,
         var(--surface-muted) 63%
       );
       background-size: 400% 100%;

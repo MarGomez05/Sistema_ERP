@@ -351,7 +351,7 @@ type FormField =
       gap: 8px;
       padding: 12px 14px;
       background: var(--danger-100);
-      border: 1px solid #f0cdca;
+      border: 1px solid var(--danger-border);
       border-radius: var(--radius-md);
       color: var(--danger-700);
       font-size: var(--text-sm);

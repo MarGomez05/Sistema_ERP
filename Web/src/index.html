@@ -7,6 +7,27 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="TAMACHIHUA ERP · Gestión de inventario, ventas y facturación para ferretería y agroservicio.">
   <meta name="theme-color" content="#0873c4">
+  <script>
+    // Aplica el tema antes del primer render para evitar el destello claro.
+    (function () {
+      try {
+        var stored = window.localStorage.getItem('tamachihua.theme');
+        var theme =
+          stored === 'dark' || stored === 'light'
+            ? stored
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.style.colorScheme = theme;
+        document
+          .querySelector('meta[name="theme-color"]')
+          .setAttribute('content', theme === 'dark' ? '#171310' : '#0873c4');
+      } catch (error) {
+        document.documentElement.setAttribute('data-theme', 'light');
+      }
+    })();
+  </script>
   <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
   <link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">

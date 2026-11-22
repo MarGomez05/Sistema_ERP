@@ -2,6 +2,7 @@ import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/c
 import { RouterLink } from '@angular/router';
 
 import { AuthService } from '@core/auth/auth.service';
+import { ThemeService } from '@core/ui/theme.service';
 import { ButtonComponent } from '@shared/ui/button/button.component';
 import { IconComponent } from '@shared/ui/icon/icon.component';
 
@@ -14,7 +15,7 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
       <div class="not-found__card">
         <img
           class="not-found__logo"
-          src="brand/logo-horizontal.png"
+          [src]="logoSrc()"
           alt="TAMACHIHUA ERP"
           width="2181"
           height="420"
@@ -130,6 +131,11 @@ import { IconComponent } from '@shared/ui/icon/icon.component';
 })
 export class NotFoundComponent {
   private readonly auth = inject(AuthService);
+  private readonly theme = inject(ThemeService);
 
   protected readonly isAuthenticated = computed(() => this.auth.isAuthenticated());
+
+  protected readonly logoSrc = computed(() =>
+    this.theme.isDark() ? 'brand/logo-horizontal-blanco.png' : 'brand/logo-horizontal.png',
+  );
 }
