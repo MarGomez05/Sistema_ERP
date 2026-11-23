@@ -371,8 +371,8 @@ cd Api/api
 
 ## 13. Documentación de referencia
 
-- [`../Implementacion.md`](../Implementacion.md): plan de la nueva etapa.
-- [`../MEMORY.md`](../MEMORY.md): decisiones y estado.
 - [`../Documentacion/Diagramas/Endpoints-API.md`](../Documentacion/Diagramas/Endpoints-API.md): contrato REST.
-- [`../Base_datos/`](../Base_datos/): esquema consolidado de referencia, MER y diccionario.
-- [`../AGENTS.md`](../AGENTS.md): reglas para agentes y desarrolladores.
+- [`../Base_datos/README.md`](../Base_datos/README.md): esquema consolidado, MER y datos de prueba.
+- [`../Base_datos/seeder.sql`](../Base_datos/seeder.sql): datos de prueba con el usuario administrador `mgomez`.
+- [`../README.md`](../README.md): visión general del proyecto.
+- [`../Web/README.md`](../Web/README.md): guía del cliente Angular.

@@ -408,7 +408,7 @@ Salida: `dist/tamachihua-web/browser`.
 | 7.7 Usuarios y roles | Administración de usuarios (alta, edición y estado) y roles (alta, edición y estado) exclusiva de `ADMIN` — **completado** |
 | 7.8 Tema claro/oscuro | Conmutador en el encabezado, paleta oscura cálida, persistencia y logotipo alterno — **completado** |
 
-Cada entregable debe actualizar este README, `MEMORY.md` e `Implementacion.md`.
+Cada entregable debe actualizar este README y la documentación oficial del proyecto.
 
 ---
 

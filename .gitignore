@@ -1,0 +1,74 @@
+# =====================================================================
+# TAMACHIHUA-ERP · Archivos ignorados por Git
+# La documentación oficial vive en los README del proyecto.
+# =====================================================================
+
+# ---------------------------------------------------------------------
+# Documentos internos de apoyo al desarrollo (no forman parte del producto)
+# ---------------------------------------------------------------------
+/AGENTS.md
+/MEMORY.md
+/Implementacion.md
+/Web/requisitos_web.md
+
+# ---------------------------------------------------------------------
+# Secretos y configuración local
+# ---------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.local
+application-local.properties
+application-local.yml
+
+# ---------------------------------------------------------------------
+# Backend (Java / Maven)
+# ---------------------------------------------------------------------
+Api/api/target/
+Api/api/.mvn/wrapper/maven-wrapper.jar
+*.class
+*.jar
+*.war
+*.ear
+*.log
+
+# ---------------------------------------------------------------------
+# Frontend (Angular / Node)
+# ---------------------------------------------------------------------
+Web/node_modules/
+Web/dist/
+Web/.angular/
+Web/coverage/
+Web/out-tsc/
+Web/.sass-cache/
+Web/npm-debug.log*
+Web/yarn-error.log*
+
+# ---------------------------------------------------------------------
+# IDE y editores
+# ---------------------------------------------------------------------
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.iml
+.settings/
+.project
+.classpath
+.factorypath
+.apt_generated
+.springBeans
+.sts4-cache
+nbproject/private/
+nbbuild/
+nbdist/
+
+# ---------------------------------------------------------------------
+# Sistema operativo y temporales
+# ---------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
