@@ -14,22 +14,19 @@ Sistema de gestión para ferretería y agroservicio. Cubre **inventario** y avan
 - **Frontend Angular implementado** en `Web/`: login real, layout responsive, guards por rol, panel general, catálogos e inventario, clientes, ventas con estado de facturación y facturación con pagos, notas de crédito y descarga de PDF. Reportes queda para el entregable 7.6.
 - Se retiran los endpoints `/api/app/**` y el encabezado `X-Client-Interface` en el código nuevo.
 
-El plan completo está en [`Implementacion.md`](Implementacion.md). Las decisiones, convenciones y pendientes están en [`MEMORY.md`](MEMORY.md).
+La documentación oficial del proyecto se mantiene en este README, en `Api/README.md`, `Web/README.md`, `Base_datos/README.md` y en el contrato REST de `Documentacion/Diagramas/Endpoints-API.md`.
 
 ## Estructura del proyecto
 
 ```text
 Control_inventario/
-├── AGENTS.md              # Instrucciones para agentes
-├── MEMORY.md              # Memoria viva del proyecto
-├── Implementacion.md      # Plan de la nueva etapa
 ├── README.md
 ├── Api/
 │   ├── README.md          # Documentación del backend
 │   └── api/               # Proyecto Spring Boot (pom.xml aquí)
-├── Base_datos/            # Esquema consolidado de referencia, MER y diccionario
-├── Documentacion/         # Contrato de API, diagramas y logo
-└── Web/                   # Cliente Angular (Fase 7 en progreso)
+├── Base_datos/            # Esquema consolidado, MER y seeder de datos de prueba
+├── Documentacion/         # Contrato de API y logo
+└── Web/                   # Cliente Angular
 ```
 
 ## Stack
@@ -95,13 +92,11 @@ La guía completa del cliente web está en [`Web/README.md`](Web/README.md).
 
 ## Documentación
 
-- [`Implementacion.md`](Implementacion.md): plan de migración y nuevas funcionalidades.
-- [`MEMORY.md`](MEMORY.md): estado, decisiones, convenciones y pendientes.
 - [`Api/README.md`](Api/README.md): configuración y guía del backend.
 - [`Web/README.md`](Web/README.md): guía del cliente Angular, diseño, rutas y entregables.
 - [`Documentacion/Diagramas/Endpoints-API.md`](Documentacion/Diagramas/Endpoints-API.md): contrato REST v2.0.
-- [`Base_datos/README.md`](Base_datos/README.md): esquema consolidado, MER y diccionario de datos.
-- [`AGENTS.md`](AGENTS.md): reglas para agentes y desarrolladores.
+- [`Base_datos/README.md`](Base_datos/README.md): esquema consolidado, MER y datos de prueba.
+- [`Base_datos/seeder.sql`](Base_datos/seeder.sql): datos de prueba de junio a la fecha, incluido el usuario administrador `mgomez`.
 
 ## Reglas generales
 

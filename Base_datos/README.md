@@ -10,7 +10,17 @@ Esta carpeta contiene el esquema consolidado y los documentos de referencia del 
 |---|---|
 | `esquema_consolidado.sql` | Script consolidado de las migraciones `V1`–`V6`: 21 tablas, 4 roles y secuencias iniciales. Sirve para revisión, documentación y creación de bases de referencia. **No** es una migración de Flyway |
 | `Script.pdf` | MER del modelo completo (2 páginas): inventario, clientes, ventas y facturación |
-| `Diccionario_de_datos_TAMACHIHUA.xlsx` | Diccionario, restricciones e índices del esquema |
+| `seeder.sql` | Datos de prueba de una ferretería y agroservicio real, con movimiento desde junio de 2026 hasta la fecha. Incluye el usuario administrador `mgomez` / `marvin_0305` y limpia los datos de negocio antes de cargar |
+
+## Datos de prueba
+
+`seeder.sql` se ejecuta **después** de que Flyway haya creado el esquema:
+
+```bash
+psql "$DB_URL" -U "$DB_USERNAME" -f Base_datos/seeder.sql
+```
+
+El script hace `TRUNCATE ... RESTART IDENTITY CASCADE` sobre las tablas de negocio (no toca `flyway_schema_history`), vuelve a crear roles y usuarios, y carga catálogos, productos, presentaciones, precios con historial, proveedores, lotes, clientes, ventas, facturación, pagos y notas de crédito. Las imágenes de las presentaciones quedan en `NULL` para que se asignen por URL desde la aplicación.
 
 ## Reglas
 
