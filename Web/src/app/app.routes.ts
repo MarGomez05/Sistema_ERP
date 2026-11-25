@@ -58,6 +58,13 @@ export const routes: Routes = [
           import('@features/customers/customers.routes').then((module) => module.CUSTOMERS_ROUTES),
       },
       {
+        path: 'suppliers',
+        canActivate: [roleGuard],
+        data: { roles: ['ADMIN', 'PURCHASING'] },
+        loadChildren: () =>
+          import('@features/suppliers/suppliers.routes').then((module) => module.SUPPLIERS_ROUTES),
+      },
+      {
         path: 'sales',
         canActivate: [roleGuard],
         data: { roles: ['ADMIN', 'WAREHOUSE', 'PURCHASING', 'SELLER'] },
