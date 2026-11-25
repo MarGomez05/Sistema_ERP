@@ -8,10 +8,11 @@ Sistema de gestión para ferretería y agroservicio. Cubre **inventario** y avan
 
 - **Flyway implementado**: migraciones `V1`–`V6` en `Api/api/src/main/resources/db/migration/`.
 - **CRUD de clientes implementado** en `/api/customers` con validaciones, saldo pendiente y seguridad por rol.
+- **CRUD de proveedores implementado** en `/api/suppliers` y en la pantalla `/suppliers`, exclusiva de `ADMIN` y `PURCHASING`, con alta, edición, filtros y activación/desactivación.
 - **Ventas implementadas** en `/api/sales`: creación y edición en `DRAFT`, confirmación con FEFO y bloqueo pesimista, cancelación con devolución de stock, numeración `V-AAAA-NNNNNN` y validación de crédito.
 - **Facturación implementada** en `/api/invoices`: emisión desde ventas confirmadas, snapshot inmutable, CCF, pagos con control de saldo, notas de crédito con devolución opcional de stock y descarga de PDF con datos de la empresa.
 - **Imágenes por URL implementadas**: `imageUrl` e `imageAlt` en presentaciones y `PUT /api/products/{productId}/presentations/{id}/image`; la subida de archivos queda para una fase posterior.
-- **Frontend Angular implementado** en `Web/`: login real, layout responsive, guards por rol, panel general, catálogos e inventario, clientes, ventas con estado de facturación y facturación con pagos, notas de crédito y descarga de PDF. Reportes queda para el entregable 7.6.
+- **Frontend Angular implementado** en `Web/`: login real, layout responsive, guards por rol, panel general, catálogos e inventario, proveedores, clientes, ventas con estado de facturación, facturación con pagos, notas de crédito, reportes y administración de usuarios y roles.
 - Se retiran los endpoints `/api/app/**` y el encabezado `X-Client-Interface` en el código nuevo.
 
 La documentación oficial del proyecto se mantiene en este README, en `Api/README.md`, `Web/README.md`, `Base_datos/README.md` y en el contrato REST de `Documentacion/Diagramas/Endpoints-API.md`.

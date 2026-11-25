@@ -165,6 +165,15 @@ Ruta comodín con identidad de marca y accesos al panel o al login según el est
 - El detalle de producto enlaza a `/lots?productId=` con la acción «Ver lotes».
 - `lot.model.ts` centraliza el mapeo al payload, la interpretación de fechas ISO como fechas locales sin desfase de zona horaria y las etiquetas de severidad, días, cantidades y costos.
 
+### Proveedores (completado)
+
+- Página `/suppliers` con búsqueda por nombre comercial, razón social o NIT; filtro por estado, paginación y contador de resultados.
+- Cada fila muestra nombre comercial y razón social, NIT/NRC, teléfono/correo, dirección, días de crédito y estado lógico.
+- Alta y edición en panel lateral con datos generales, documentos (NIT, NRC), contacto (teléfono, correo, dirección) y días de crédito. Las validaciones replican el contrato: longitudes, formatos de NIT/NRC/teléfono/correo y unicidad reportada por el backend.
+- Activación y desactivación con confirmación en línea mediante `PATCH /api/suppliers/{id}/status`.
+- Acceso exclusivo para `ADMIN` y `PURCHASING`, tanto en la ruta (`roleGuard`) como en el menú y en `SecurityConfig`; ambos perfiles pueden crear, editar y cambiar el estado.
+- `supplier.model.ts` centraliza el mapeo al payload, la conversión de textos vacíos a `null`, los patrones de NIT/NRC/teléfono y las etiquetas de crédito y contacto.
+
 ### Clientes (7.3 completado)
 
 - Listado `/customers` con búsqueda por nombre, documento, NIT o correo; filtros por tipo de documento y estado; paginación y contador de resultados.
@@ -289,9 +298,12 @@ Web/
 │   │   │   ├── catalogs/      # configuración, servicio, pestañas, listado y formulario
 │   │   │   ├── products/      # modelo, servicio, listado, detalle y formularios
 │   │   │   ├── lots/          # modelo, servicio, listado, ingreso y corrección de cantidad
+│   │   │   ├── suppliers/     # modelo, servicio, listado y formulario de proveedores
 │   │   │   ├── customers/     # modelo, servicio, listado, formularios y detalle
 │   │   │   ├── sales/         # modelo, servicio, listado, editor y detalle de venta
 │   │   │   ├── billing/       # facturas, detalle, pagos y nota de crédito
+│   │   │   ├── reports/       # ventas, cuentas por cobrar, productos y existencias
+│   │   │   ├── users/         # usuarios, roles y formularios
 │   │   │   ├── dashboard/
 │   │   │   └── errors/
 │   │   ├── app.config.ts
@@ -321,6 +333,7 @@ Alias de importación disponibles: `@core/*`, `@shared/*`, `@layout/*`, `@featur
 | `/products` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Listado de productos |
 | `/products/:id` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Detalle y presentaciones del producto |
 | `/lots` | `ADMIN`, `WAREHOUSE`, `PURCHASING` | Consulta de lotes; alta solo `ADMIN` y corrección `ADMIN`/`WAREHOUSE` |
+| `/suppliers` | `ADMIN`, `PURCHASING` | Listado, alta, edición y estado de proveedores |
 | `/customers` | `ADMIN`, `PURCHASING`, `SELLER` | Listado de clientes; alta y edición `ADMIN`/`SELLER` |
 | `/customers/:id` | `ADMIN`, `PURCHASING`, `SELLER` | Detalle, crédito y estado del cliente |
 | `/sales` | `ADMIN`, `WAREHOUSE`, `PURCHASING`, `SELLER` | Listado de ventas; `SELLER` solo las propias |
@@ -407,6 +420,7 @@ Salida: `dist/tamachihua-web/browser`.
 | 7.6 Reportes | Ventas por período, cuentas por cobrar, productos más vendidos y exportación de existencias en PDF/Excel — **completado** |
 | 7.7 Usuarios y roles | Administración de usuarios (alta, edición y estado) y roles (alta, edición y estado) exclusiva de `ADMIN` — **completado** |
 | 7.8 Tema claro/oscuro | Conmutador en el encabezado, paleta oscura cálida, persistencia y logotipo alterno — **completado** |
+| 7.9 Proveedores | Listado, búsqueda, filtro por estado, alta, edición y activación/desactivación para `ADMIN` y `PURCHASING` — **completado** |
 
 Cada entregable debe actualizar este README y la documentación oficial del proyecto.
 
@@ -414,9 +428,10 @@ Cada entregable debe actualizar este README y la documentación oficial del proy
 
 ## 11. Limitaciones conocidas
 
-- Solo el panel general, los catálogos, los productos con sus presentaciones y precios, los lotes, los clientes, las ventas, la facturación, los reportes y la administración de usuarios y roles están implementados.
-- El alta de lotes requiere el catálogo de proveedores, por lo que `WAREHOUSE` puede corregir cantidades pero no registrar ingresos desde la interfaz.
+- Solo el panel general, los catálogos, los productos con sus presentaciones y precios, los lotes, los proveedores, los clientes, las ventas, la facturación, los reportes y la administración de usuarios y roles están implementados.
+- El alta de lotes requiere el catálogo de proveedores, disponible en `/suppliers` para `ADMIN` y `PURCHASING`; por eso `WAREHOUSE` puede corregir cantidades pero no registrar ingresos desde la interfaz.
 - `PURCHASING` puede consultar lotes con costos y filtrar por proveedor, pero no registrar ingresos ni corregir cantidades.
+- Los proveedores solo los consultan, crean, editan y activan/desactivan `ADMIN` y `PURCHASING`; `WAREHOUSE` y `SELLER` no tienen acceso a la pantalla ni a `/api/suppliers/**`.
 - Las condiciones de crédito y el estado de un cliente solo los modifica `ADMIN`; `SELLER` puede crear y editar los datos básicos, y al crear el cliente la línea de crédito queda en cero.
 - `PURCHASING` consulta clientes, saldo y crédito en modo lectura.
 - `SELLER` solo ve sus propias ventas; `WAREHOUSE` y `PURCHASING` consultan el historial completo sin crear, editar, confirmar ni cancelar. Cancelar una venta queda reservado a `ADMIN`.
