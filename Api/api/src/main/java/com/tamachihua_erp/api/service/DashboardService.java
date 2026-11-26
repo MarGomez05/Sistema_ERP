@@ -1,6 +1,5 @@
 package com.tamachihua_erp.api.service;
 
-import com.tamachihua_erp.api.dto.app.AppLowStockItemDto;
 import com.tamachihua_erp.api.dto.dashboard.DashboardSummaryDto;
 import com.tamachihua_erp.api.dto.dashboard.ExpiringLotItemDto;
 import com.tamachihua_erp.api.dto.dashboard.LowStockItemDto;
@@ -17,6 +16,4 @@ public interface DashboardService {
     Page<LowStockItemDto> findLowStock(Pageable pageable);
 
     List<ExpiringLotItemDto> findExpiringLots();
-
-    List<AppLowStockItemDto> findAppLowStock();
 }

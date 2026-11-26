@@ -13,7 +13,7 @@ Sistema de gestión para ferretería y agroservicio. Cubre **inventario** y avan
 - **Facturación implementada** en `/api/invoices`: emisión desde ventas confirmadas, snapshot inmutable, CCF, pagos con control de saldo, notas de crédito con devolución opcional de stock y descarga de PDF con datos de la empresa.
 - **Imágenes por URL implementadas**: `imageUrl` e `imageAlt` en presentaciones y `PUT /api/products/{productId}/presentations/{id}/image`; la subida de archivos queda para una fase posterior.
 - **Frontend Angular implementado** en `Web/`: login real, layout responsive, guards por rol, panel general, catálogos e inventario, proveedores, clientes, ventas con estado de facturación, facturación con pagos, notas de crédito, reportes y administración de usuarios y roles.
-- Se retiran los endpoints `/api/app/**` y el encabezado `X-Client-Interface` en el código nuevo.
+- Se retiraron los endpoints `/api/app/**`, el encabezado `X-Client-Interface` y los orígenes CORS de Ionic/Vue; el único cliente es Angular web.
 
 La documentación oficial del proyecto se mantiene en este README, en `Api/README.md`, `Web/README.md`, `Base_datos/README.md` y en el contrato REST de `Documentacion/Diagramas/Endpoints-API.md`.
 
@@ -44,7 +44,7 @@ Control_inventario/
 
 ## Arranque rápido del backend
 
-Requisitos: JDK 21, Docker (para pruebas) y PostgreSQL 16+.
+Requisitos: JDK 21, PostgreSQL 16+ y Docker (para pruebas con Testcontainers; alternativamente, PostgreSQL local con `TEST_DB_MODE=local-pg`).
 
 ```bash
 cd Api/api

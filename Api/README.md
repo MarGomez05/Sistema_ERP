@@ -4,7 +4,7 @@
 
 Backend REST del ERP, construido con Java 21 y Spring Boot. Centraliza la lógica de negocio, la seguridad y el acceso a PostgreSQL.
 
-> **Alcance del cliente:** únicamente **Angular web**. No se usa Vue, Ionic ni aplicación móvil. Los endpoints `/api/app/**` y el encabezado `X-Client-Interface` se retiran en la migración.
+> **Alcance del cliente:** únicamente **Angular web**. No se usa Vue, Ionic ni aplicación móvil. Los endpoints `/api/app/**` y el encabezado `X-Client-Interface` ya fueron retirados del código.
 
 ## 1. Ubicación y estructura
 
@@ -191,7 +191,7 @@ Nunca escribas credenciales reales en el repositorio.
 
 ## 6. Ejecutar el backend
 
-Requisitos: JDK 21, PostgreSQL 16+ y Docker para pruebas.
+Requisitos: JDK 21, PostgreSQL 16+ y Docker para pruebas (o un PostgreSQL local con el modo `local-pg`).
 
 ```bash
 cd Api/api
@@ -282,9 +282,13 @@ GET  /api/reports/stock/export?format=PDF|XLSX&categoryId=
 
 ### 7.4 Retirados
 
-- `/api/app/**`
-- Encabezado `X-Client-Interface`
-- Cualquier DTO o regla exclusiva de la app móvil
+Ya no existen en el código:
+
+- `/api/app/**` (`AppProductController`, `AppCatalogController`, `AppAlertController`).
+- `AppProductService`, su implementación y los DTO de `dto/app`.
+- Encabezado `X-Client-Interface` y la validación de rol por interfaz en el login.
+- Orígenes CORS de Ionic, Capacitor y Vue.
+- `DashboardService.findAppLowStock()` y la consulta `findLowStockList()`.
 
 ## 8. Seguridad
 
@@ -339,12 +343,24 @@ cd Api/api
 ./mvnw verify
 ```
 
-- Testcontainers requiere Docker.
+- Testcontainers requiere Docker. Sin Docker se puede usar un PostgreSQL local con `TEST_DB_MODE=local-pg` y las variables `TEST_DB_URL`, `TEST_DB_USERNAME`, `TEST_DB_PASSWORD` y `TEST_DB_SCHEMA`. En ese modo el esquema debe ser dedicado (distinto de `public`), porque cada prueba vacía sus tablas.
 - El perfil `test` (`src/test/resources/application-test.properties`) aporta un secreto JWT exclusivo de pruebas.
-- Flyway prepara el esquema en el contenedor desde `V1`.
+- Flyway prepara el esquema en el contenedor (o en el esquema indicado por `TEST_DB_SCHEMA`) desde `V1`.
 - Pruebas unitarias: IVA, totales, FEFO, numeración y crédito.
-- Pruebas de integración: repositorios, servicios, MockMvc, seguridad y concurrencia.
+- Pruebas de integración (`integration/`): login y `/me`, matriz de seguridad por rol, FEFO con lotes vencidos y concurrencia sin sobreventa. La base se limpia antes de cada prueba.
 - CI: GitHub Actions con JDK 21 y Maven.
+
+Ejemplo sin Docker (esquema dedicado en un PostgreSQL local):
+
+```bash
+cd Api/api
+TEST_DB_MODE=local-pg \
+TEST_DB_URL='jdbc:postgresql://localhost:5432/mi_bd?currentSchema=erp_test' \
+TEST_DB_USERNAME=mi_usuario \
+TEST_DB_PASSWORD=mi_clave \
+TEST_DB_SCHEMA=erp_test \
+./mvnw test
+```
 
 ## 11. Convenciones
 

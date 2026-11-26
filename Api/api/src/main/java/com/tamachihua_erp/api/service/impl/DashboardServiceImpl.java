@@ -1,6 +1,5 @@
 package com.tamachihua_erp.api.service.impl;
 
-import com.tamachihua_erp.api.dto.app.AppLowStockItemDto;
 import com.tamachihua_erp.api.dto.dashboard.DashboardSummaryDto;
 import com.tamachihua_erp.api.dto.dashboard.ExpiringLotItemDto;
 import com.tamachihua_erp.api.dto.dashboard.LowStockItemDto;
@@ -67,27 +66,6 @@ public class DashboardServiceImpl implements DashboardService {
         return productLotRepository.findExpiringLots(limit)
                 .stream()
                 .map(projection -> toExpiringLotItem(projection, today))
-                .toList();
-    }
-
-    @Override
-    public List<AppLowStockItemDto> findAppLowStock() {
-
-        return productPresentationRepository.findLowStockList()
-                .stream()
-                .map(projection -> {
-
-                    BigDecimal stock = safe(projection.getCurrentStock());
-                    BigDecimal minStock = safe(projection.getMinStock());
-
-                    return new AppLowStockItemDto(
-                            projection.getProductId(),
-                            projection.getProductName(),
-                            projection.getPresentationName(),
-                            stock,
-                            StockStatusCalculator.calculate(stock, minStock)
-                    );
-                })
                 .toList();
     }
 
