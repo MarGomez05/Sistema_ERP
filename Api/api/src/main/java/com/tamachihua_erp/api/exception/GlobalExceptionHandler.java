@@ -16,6 +16,7 @@ import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -164,6 +165,19 @@ public class GlobalExceptionHandler {
         return buildResponse(
                 HttpStatus.METHOD_NOT_ALLOWED,
                 "El método HTTP utilizado no está permitido para este recurso",
+                request
+        );
+    }
+
+    // 7.1 Ruta inexistente o recurso estático no encontrado: HTTP 404
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponseDto> handleNoResourceFound(
+            NoResourceFoundException ex,
+            HttpServletRequest request
+    ) {
+        return buildResponse(
+                HttpStatus.NOT_FOUND,
+                "El recurso solicitado no existe",
                 request
         );
     }

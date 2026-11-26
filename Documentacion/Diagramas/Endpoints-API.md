@@ -3,7 +3,7 @@
 **Versión:** 2.0 · **Backend:** Java + Spring Boot + PostgreSQL + Flyway · **Cliente único:** Angular web
 **Base:** Product Backlog v1.2, MER del inventario y plan aprobado en `Implementacion.md`.
 
-> **Cambio de alcance:** se elimina la app móvil (Ionic) y el panel Vue. El único cliente es **Angular web**. Se retiran `/api/app/**` y el encabezado `X-Client-Interface`.
+> **Cambio de alcance:** se elimina la app móvil (Ionic) y el panel Vue. El único cliente es **Angular web**. Ya se retiraron `/api/app/**`, el encabezado `X-Client-Interface` y los orígenes CORS de Ionic/Vue.
 
 ---
 

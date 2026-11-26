@@ -5,5 +5,5 @@ import com.tamachihua_erp.api.dto.auth.LoginResponseDto;
 
 public interface AuthService {
 
-    LoginResponseDto login(LoginRequestDto request, String clientInterface);
+    LoginResponseDto login(LoginRequestDto request);
 }

@@ -110,19 +110,14 @@ public class SecurityConfig {
         return converter;
     }
 
-    // Configuración CORS para el panel web y la aplicación móvil
+    // Configuración CORS para el cliente Angular web
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowedOrigins(List.of(
-                "http://localhost:8100", // app (Ionic + angular)
-                "http://localhost:4200", // app (ng serve / pruebas e2e)
-                "http://localhost:8081", // web (Vue)
-                "http://localhost",      // app compilada (Capacitor Android)
-                "https://localhost",     // app compilada (Capacitor iOS)
-                "capacitor://localhost", // app compilada (Capacitor iOS)
-                "ionic://localhost"      // app compilada (Ionic)
+                "http://localhost:4200",  // ng serve y pruebas e2e
+                "http://127.0.0.1:4200"
         ));
 
         configuration.setAllowedMethods(List.of(
@@ -135,8 +130,7 @@ public class SecurityConfig {
 
         configuration.setAllowedHeaders(List.of(
                 "Authorization",
-                "Content-Type",
-                "X-Client-Interface"
+                "Content-Type"
         ));
 
         UrlBasedCorsConfigurationSource source =
@@ -178,14 +172,6 @@ public class SecurityConfig {
                                 HttpMethod.GET,
                                 "/api/auth/me"
                         ).authenticated()
-
-                        // Rutas de la aplicación móvil (HU-17).
-                        // Solo los roles que pueden usar la app.
-                        .requestMatchers("/api/app/**").hasAnyRole(
-                                "ADMIN",
-                                "WAREHOUSE",
-                                "SELLER"
-                        )
 
                         // Precios de productos: solo ADMIN (HU-08)
                         .requestMatchers(

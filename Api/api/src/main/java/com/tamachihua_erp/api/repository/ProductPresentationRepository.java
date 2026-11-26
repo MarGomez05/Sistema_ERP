@@ -107,35 +107,6 @@ public interface ProductPresentationRepository
     Page<LowStockProjection> findLowStock(Pageable pageable);
 
     @Query(value = """
-            SELECT p.id AS "productId",
-                   p.code AS "productCode",
-                   p.name AS "productName",
-                   pr.name AS "presentationName",
-                   COALESCE((
-                       SELECT SUM(l.available_quantity)
-                       FROM product_lots l
-                       WHERE l.product_presentation_id = pp.id
-                         AND l.is_active = TRUE
-                         AND l.available_quantity > 0
-                   ), 0) AS "currentStock",
-                   pp.min_stock AS "minStock"
-            FROM product_presentations pp
-            JOIN products p ON p.id = pp.product_id
-            JOIN presentations pr ON pr.id = pp.presentation_id
-            WHERE pp.is_active = TRUE
-              AND p.is_active = TRUE
-              AND COALESCE((
-                    SELECT SUM(l.available_quantity)
-                    FROM product_lots l
-                    WHERE l.product_presentation_id = pp.id
-                      AND l.is_active = TRUE
-                      AND l.available_quantity > 0
-              ), 0) <= pp.min_stock
-            ORDER BY p.name ASC, pr.name ASC
-            """, nativeQuery = true)
-    List<LowStockProjection> findLowStockList();
-
-    @Query(value = """
             SELECT COUNT(*)
             FROM product_presentations pp
             JOIN products p ON p.id = pp.product_id

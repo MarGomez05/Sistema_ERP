@@ -94,7 +94,7 @@ npx ng serve --port 4300      # puerto alternativo
 - `roleGuard`: restringe rutas según `data.roles`; el backend sigue siendo la autoridad final.
 - `authInterceptor`: agrega `Authorization: Bearer <token>` a las llamadas a la API, excepto al login.
 - `errorInterceptor`: traduce 401, 403, 0 y 5xx en notificaciones claras y cierra la sesión cuando corresponde.
-- No se envía `X-Client-Interface`: el login web funciona sin ese encabezado.
+- El login no envía encabezados de interfaz: el backend ya no admite `X-Client-Interface`.
 
 ### Layout y navegación
 
